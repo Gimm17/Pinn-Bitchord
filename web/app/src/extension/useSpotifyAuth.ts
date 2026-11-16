@@ -18,7 +18,7 @@ function detected(): DetectedExtension | null {
   return queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey) ?? null;
 }
 
-const supported = (extension: DetectedExtension | null) => !!extension?.info.capabilities.includes('spotify');
+const supported = (extension: DetectedExtension | null) => !!extension?.info?.capabilities?.includes('spotify');
 
 function adopt(state: SpotifyAuthState): void {
   const before = queryClient.getQueryData<SpotifyAuthState>(spotifyAuthQueryKey);

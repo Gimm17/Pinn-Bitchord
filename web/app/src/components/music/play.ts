@@ -51,3 +51,10 @@ export function shuffleList(tracks: Track[], context: ListContext) {
   if (!player.shuffle) player.toggleShuffle();
   player.playTracks(prepared(tracks, context), Math.floor(Math.random() * tracks.length), context.source);
 }
+
+
+/** Starts radio from a track or shelf item, pre-populating with recommendations. */
+export function playRadio(item: Track | MusicItem, fallbackArtwork?: string | null) {
+  const track = toTrack(item, fallbackArtwork);
+  void usePlayer.getState().startRadio(track);
+}

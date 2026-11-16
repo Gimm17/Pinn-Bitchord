@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import type { DetectedExtension } from '@bitchord/shared/bridge';
-import { extensionQueryKey, useExtension } from '@/extension/useExtension';
+import { extensionQueryKey, isTauriDesktop, useExtension } from '@/extension/useExtension';
 import { useYtAuth, ytAuthSnapshot } from '@/extension/useYtAuth';
 import { queryClient } from '@/lib/queryClient';
 import {
@@ -87,9 +87,10 @@ export const playlistQuery = (id: string) =>
 
 /** True once the extension has answered; queries wait on it. */
 export function useYouTubeReady(): { ready: boolean; missing: boolean } {
+  if (isTauriDesktop()) return { ready: true, missing: false };
   const extension = useExtension();
   return {
-    ready: extension.state === 'present' && extension.extension.info.capabilities.includes('yt'),
+    ready: extension.state === 'present' && !!extension.extension.info?.capabilities?.includes('yt'),
     missing: extension.state === 'missing',
   };
 }
@@ -147,7 +148,7 @@ export function useSuggestions(input: string) {
 /** Warms the first query of a page, for links' hover/focus prefetch (prompt §3). */
 export function prefetchPageData(pathname: string): void {
   const detected = queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey);
-  if (!detected?.info.capabilities.includes('yt')) return;
+  if (!detected?.info?.capabilities?.includes('yt')) return;
   const [, kind, id] = pathname.split('/');
   if (!id) {
     if (kind === 'home') void queryClient.prefetchInfiniteQuery(homeQuery());

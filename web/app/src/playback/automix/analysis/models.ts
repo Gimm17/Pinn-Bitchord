@@ -78,7 +78,8 @@ function reflectPad(samples: Float32Array, pad: number): Float32Array {
 
 // ---- Beat This! log-mel front end (mel_spectrogram.cpp) -------------------------------------
 
-export const BEAT_SR = 22050;
+export { BEAT_SR } from './constants';
+const BEAT_SR = 22050;
 const BEAT_FFT = 1024;
 const BEAT_HOP = 441;
 const BEAT_MELS = 128;
@@ -312,7 +313,8 @@ const VOCAL_BINS = VOCAL_FFT / 2 + 1;
 export const VOCAL_FPS = VOCAL_SR / VOCAL_HOP;
 /** The model's fixed input width, ~22.3 s. */
 export const VOCAL_FRAMES = 960;
-export const VOCAL_WINDOW_SEC = ((VOCAL_FRAMES - 2) * VOCAL_HOP) / VOCAL_SR;
+export { VOCAL_WINDOW_SEC } from './constants';
+const VOCAL_WINDOW_SEC = ((VOCAL_FRAMES - 2) * VOCAL_HOP) / VOCAL_SR;
 
 let vocalSession: Promise<ort.InferenceSession | null> | null = null;
 

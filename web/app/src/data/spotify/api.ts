@@ -3,9 +3,10 @@ import { best, type MatchCandidate } from '@/data/match/trackMatcher';
 import { searchSongs } from '@/data/music/api';
 import type { Track } from '@/data/music/types';
 import { getBridge } from '@/extension/bridge';
+import { fetchSpotifyPublicEntity } from './importer';
 
 /**
- * Spotify through the extension (prompt §7.1): the library, a playlist's
+ * Spotify through the extension or public embed importer: the library, a playlist's
  * tracks, and matching each one to its YouTube Music song. Ports
  * SpotifyLibrary.kt's paging and SpotifyImporter.matchTrack.
  */
@@ -30,21 +31,62 @@ export async function fetchSpotifyPlaylists(): Promise<SpotifyPlaylist[]> {
   return out;
 }
 
-export function fetchSpotifyPlaylistInfo(playlistId: string) {
-  return bridge().call('spotify.playlist', { playlistId }, { timeoutMs: 30_000 });
+export async function fetchSpotifyPlaylistInfo(playlistId: string): Promise<{
+  id: string;
+  name: string;
+  owner: string | null;
+  imageUrl: string | null;
+  total: number;
+}> {
+  const b = getBridge();
+  if (b) {
+    try {
+      const res = await b.call('spotify.playlist', { playlistId }, { timeoutMs: 15_000 });
+      return {
+        id: playlistId,
+        name: res.name,
+        owner: res.owner,
+        imageUrl: res.imageUrl,
+        total: res.total,
+      };
+    } catch {
+      // Fall through to public embed
+    }
+  }
+  const pub = await fetchSpotifyPublicEntity(playlistId);
+  return {
+    id: pub.id,
+    name: pub.name,
+    owner: pub.owner,
+    imageUrl: pub.coverArt,
+    total: pub.tracks.length,
+  };
 }
 
 /** Every track of a playlist; [onPage] gets the running list after each page, so a long one fills in. */
-export async function fetchSpotifyTracks(playlistId: string, onPage: (soFar: SpotifyTrack[], total: number) => void): Promise<SpotifyTrack[]> {
-  const out: SpotifyTrack[] = [];
-  for (let offset = 0; ; ) {
-    const page = await bridge().call('spotify.tracks', { playlistId, offset }, { timeoutMs: 30_000 });
-    out.push(...page.items);
-    offset += page.raw;
-    onPage([...out], page.total);
-    if (page.raw === 0 || offset >= page.total) break;
+export async function fetchSpotifyTracks(
+  playlistId: string,
+  onPage: (soFar: SpotifyTrack[], total: number) => void,
+): Promise<SpotifyTrack[]> {
+  const b = getBridge();
+  if (b) {
+    try {
+      const out: SpotifyTrack[] = [];
+      for (let offset = 0; ; ) {
+        const page = await b.call('spotify.tracks', { playlistId, offset }, { timeoutMs: 30_000 });
+        out.push(...page.items);
+        offset += page.raw;
+        onPage([...out], page.total);
+        if (page.raw === 0 || offset >= page.total) break;
+      }
+      return out;
+    } catch {
+      // Fall through to public embed
+    }
   }
-  return out;
+  const pub = await fetchSpotifyPublicEntity(playlistId);
+  onPage(pub.tracks, pub.tracks.length);
+  return pub.tracks;
 }
 
 /** A Spotify row as a list row, before its YouTube Music version is known. */

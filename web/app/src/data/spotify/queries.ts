@@ -16,11 +16,10 @@ export function useSpotifyPlaylists() {
 }
 
 export function useSpotifyPlaylistInfo(playlistId: string) {
-  const signedIn = useSpotifySignedIn();
   return useQuery({
     queryKey: ['spotify', 'data', 'playlist', playlistId],
     queryFn: () => fetchSpotifyPlaylistInfo(playlistId),
-    enabled: signedIn && !!playlistId,
+    enabled: !!playlistId,
     staleTime: 5 * 60_000,
   });
 }
@@ -118,7 +117,7 @@ const jobs = new Map<string, PlaylistJob>();
 /** Per account and playlist: another account's rows are never shown. */
 export function useSpotifyRows(playlistId: string): SpotifyRows & { retry: () => void } {
   const auth = useSpotifyAuth();
-  const account = auth.state === 'ready' && auth.auth.signedIn ? (auth.auth.user?.name ?? '?') : null;
+  const account = auth.state === 'ready' && auth.auth.signedIn ? (auth.auth.user?.name ?? '?') : 'public';
   const key = `${account}|${playlistId}`;
   let job = jobs.get(key);
   if (!job) {
@@ -126,8 +125,6 @@ export function useSpotifyRows(playlistId: string): SpotifyRows & { retry: () =>
     jobs.set(key, job);
   }
   const current = job;
-  const state = useSyncExternalStore(account ? current.subscribe : noSubscribe, () => current.state);
+  const state = useSyncExternalStore(current.subscribe, () => current.state);
   return { ...state, retry: () => current.retry() };
 }
-
-const noSubscribe = () => () => undefined;

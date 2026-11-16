@@ -31,6 +31,7 @@
   --breakpoint-sm: 484px; /* below: phone, the sidebar becomes a drawer */
   --breakpoint-md: 768px;
   --breakpoint-lg: 1000px;
+  --breakpoint-xl: 1280px; /* the side panel's padding (AppShell) waits for this */
 
   /* Film grain over the 2D mesh fallback (MeshBackdrop). */
   --background-image-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -120,6 +121,7 @@
   --color-primary: var(--systemPrimary);
   --color-secondary: var(--systemSecondary);
   --color-tertiary: var(--systemTertiary);
+  --color-label: var(--systemLabel);
   --color-quaternary: var(--systemQuaternary);
   --color-quinary: var(--systemQuinary);
   --color-primary-on-dark: var(--systemPrimary-onDark);
@@ -143,6 +145,40 @@
 
   --color-divider: var(--labelDivider);
   --color-vibrant-divider: var(--vibrantDivider);
+
+  /* Light Ceramic & Frosted Sage, named by role. Components use these
+     instead of hex literals so the accent can move in one place. */
+  --color-ceramic: var(--pageBG);
+  --color-porcelain: var(--bgPorcelain);
+  --color-chrome: var(--bgChrome);
+  --color-sage: var(--bgSage);
+  --color-border-subtle: var(--borderSubtle);
+  --color-border-card: var(--borderCard);
+  --color-ink: var(--systemPrimary);
+  --color-ink-secondary: var(--systemSecondary);
+  --color-ink-tertiary: var(--systemTertiary);
+  --color-ink-muted: var(--inkMuted);
+  /* `accent` is the FILL (bg-accent, border-accent, fill-accent); `accent-ink`
+     is the TEXT colour. Using one for the other is what made dark mode put
+     #3368A0 text on a #12120F page at 3.2:1. */
+  --color-accent: var(--accentSlate);
+  --color-accent-ink: var(--accentInk);
+  --color-on-accent: var(--onAccent);
+  --color-surface-muted: var(--surfaceMuted);
+  --color-accent-soft: var(--accentSlateSoft);
+  --color-accent-hover: var(--accentSlateHover);
+  --color-sky: var(--skyCerulean);
+  --color-sky-ink: var(--skyInk);
+  --color-player-band: var(--playerBand);
+  --color-success: var(--successText);
+  --color-success-soft: var(--successBG);
+  --color-danger: var(--dangerText);
+  --color-danger-soft: var(--dangerBG);
+  --color-on-danger: var(--onDanger);
+  --color-warning: var(--warningText);
+  --color-warning-soft: var(--warningBG);
+  --color-highlight: var(--accentSlateSoft);
+  --color-slate-navy: var(--accentNavy);
   --color-glass: var(--glassMaterialBackground);
   --color-glass-shadow: var(--glassMaterialShadowColor);
   --color-thin-material: var(--systemStandardThinMaterialSover);
@@ -166,18 +202,37 @@
   --color-skeleton: var(--skeleton-fill);
   --color-skeleton-shimmer: var(--skeleton-shimmer);
 
-  --radius-*: initial;
+  /*
+   * The design's squircle scale (Law 1: no sharp corners). Tailwind's own
+   * radius scale is reset above, so each name the components use is restated
+   * here; without this `rounded-2xl` and `rounded-3xl` render nothing at all.
+   */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  /* A pill, not 50%: 50% draws an ellipse on a non-square box. */
+  --radius-full: 9999px;
   --radius-artwork-sm: var(--radius-artwork-small);
   --radius-artwork-md: var(--radius-artwork-medium);
   --radius-artwork-lg: var(--radius-artwork-large);
   --radius-nav: var(--radius-nav-item);
   --radius-row: var(--radius-track-row);
   --radius-pill: 1000px;
-  --radius-full: 50%;
 
   --ease-panel: var(--ease-out-panel);
 
-  --shadow-*: initial;
+  /* Restated for the same reason as the radii: `shadow-2xs` etc. must exist. */
+  --shadow-2xs: 0 1px 2px 0 rgb(19 34 48 / 0.05);
+  --shadow-xs: 0 1px 3px 0 rgb(19 34 48 / 0.07), 0 1px 2px -1px rgb(19 34 48 / 0.05);
+  --shadow-sm: 0 2px 6px -1px rgb(19 34 48 / 0.08), 0 1px 3px -1px rgb(19 34 48 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(19 34 48 / 0.1), 0 2px 5px -2px rgb(19 34 48 / 0.06);
+  --shadow-lg: 0 10px 24px -6px rgb(19 34 48 / 0.12), 0 4px 10px -4px rgb(19 34 48 / 0.07);
+  --shadow-xl: 0 20px 40px -12px rgb(19 34 48 / 0.16), 0 8px 18px -8px rgb(19 34 48 / 0.08);
   --shadow-glass: 0 10px 40px var(--glassMaterialShadowColor);
 
   --type-header-emphasized: var(--header-emphasized);
@@ -367,9 +422,22 @@
     cursor: default;
   }
 
-  input {
+  input,
+  textarea,
+  select {
     font: inherit;
     color: inherit;
+    /* No preflight: the UA's sunken field border and fill would show
+       through every pill and search bar and draw a second box inside it. */
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--systemTertiary);
   }
 
   img {

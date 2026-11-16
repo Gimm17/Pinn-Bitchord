@@ -7,7 +7,7 @@ import { trackLog } from '@/playback/trackLog';
 import { getAnalysis, putAnalysis } from '../db';
 import { fetchTrackAudio, type TrackAudio } from '../fetchAudio';
 import type { AnalyzeResponse } from './analysis.worker';
-import { BEAT_SR, VOCAL_WINDOW_SEC } from './models';
+import { BEAT_SR, VOCAL_WINDOW_SEC } from './constants';
 import type { TrackAnalysis, TrackTags } from './types';
 import { ANALYSIS_VERSION } from './types';
 

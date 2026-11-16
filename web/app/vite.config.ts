@@ -24,12 +24,24 @@ function requirePartyServer(mode: string): void {
   }
 }
 
+// The shipped version, read from Tauri's config rather than typed into a
+// component: the sidebar's version pill has to agree with the binary.
+function appVersion(): string {
+  try {
+    const config = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+    return typeof config.version === 'string' ? config.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
 export default defineConfig(({ command, mode }) => {
   if (command === 'build') requirePartyServer(mode);
   return {
     plugins: [react(), tailwindcss()],
     define: {
       DEV_EXTENSION_ID: JSON.stringify(devExtensionId()),
+      __APP_VERSION__: JSON.stringify(appVersion()),
     },
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },

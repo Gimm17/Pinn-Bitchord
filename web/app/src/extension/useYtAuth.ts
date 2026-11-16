@@ -21,7 +21,8 @@ function detected(): DetectedExtension | null {
 }
 
 function supportsAuth(extension: DetectedExtension | null): boolean {
-  return !!extension?.info.capabilities.includes('yt.auth');
+  // A browser dev session detects no extension at all; treat that as "no".
+  return !!extension?.info?.capabilities?.includes('yt.auth');
 }
 
 /** The current state, for code outside React (the music API, the player). */

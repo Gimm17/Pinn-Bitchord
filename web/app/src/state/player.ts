@@ -1,7 +1,7 @@
 import type { DetectedExtension } from '@bitchord/shared/bridge';
 import { create } from 'zustand';
 import type { Track } from '@/data/music/types';
-import { extensionQueryKey } from '@/extension/useExtension';
+import { extensionQueryKey, isTauriDesktop } from '@/extension/useExtension';
 import { artworkAtPixels } from '@/lib/artwork';
 import { queryClient } from '@/lib/queryClient';
 import { extendStation } from '@/playback/queue/builder';
@@ -78,6 +78,8 @@ interface PlayerState extends Settings {
   playTracks: (tracks: Track[], startIndex: number, source: QueueSource) => void;
   /** Plays one song on its own (search, home); AutoPlay carries on after it. */
   playTrack: (track: Track, source: QueueSource) => void;
+  /** Starts a radio station seeded on [track], turning autoplay on and prefetching candidates. */
+  startRadio: (track: Track) => Promise<void>;
   /** Plays a bare video id (the Debug page). */
   playVideo: (videoId: string, hint?: Partial<Omit<NowPlaying, 'videoId'>>) => Promise<void>;
   playNext: (tracks: Track[], source?: QueueSource | null) => void;
@@ -266,7 +268,16 @@ function ensureAutomix(): Promise<AutomixGraph | null> {
           back.gain = 1;
           applyVolumes();
           try {
-            const track = await back.engine.load(videoId, { autoplay: false });
+            const nextEntry = usePlayer.getState().queue.find((e) => e.track.videoId === videoId);
+            const target = nextEntry
+              ? {
+                  title: nextEntry.track.title,
+                  artist: artistNames(nextEntry.track),
+                  album: nextEntry.track.album?.name ?? null,
+                  durationSec: nextEntry.track.durationSec,
+                }
+              : undefined;
+            const track = await back.engine.load(videoId, { autoplay: false, target });
             mixLoaded = { videoId, track };
             return true;
           } catch (error) {
@@ -368,8 +379,9 @@ function syncAutomix() {
 }
 
 function extensionReady(): boolean {
+  if (isTauriDesktop()) return true;
   const detected = queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey);
-  return !!detected?.info.capabilities.includes('yt');
+  return !!detected?.info?.capabilities?.includes('yt');
 }
 
 const artistNames = (track: Track) => track.artists.map((a) => a.name).join(', ');
@@ -450,6 +462,33 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     set({ queue: buildOneOffQueue(queue, index, track, source) });
     void startAt(0);
     intent();
+  },
+
+  async startRadio(track) {
+    const source: QueueSource = { title: `${track.title} Radio`, type: 'radio', id: `RDAMVM${track.videoId}` };
+    set({ autoplay: true });
+    get().playTrack(track, source);
+    try {
+      const { fetchRadio } = await import('@/data/music/api');
+      const { candidates, seedIsVideo } = await fetchRadio(track.videoId);
+      const current = get();
+      if (current.nowPlaying?.videoId === track.videoId) {
+        const extra = extendStation(
+          current.queue.map((e) => e.track),
+          candidates,
+          15,
+          seedIsVideo,
+        );
+        if (extra.length) {
+          set({
+            queue: [...current.queue, ...extra.map((t) => asEntry(t, 'autoplay', source))],
+          });
+          trackLog.i(`startRadio seeded ${extra.length} tracks for ${track.title}`, track.videoId);
+        }
+      }
+    } catch (error) {
+      trackLog.w(`startRadio couldn't load radio: ${String(error)}`, track.videoId);
+    }
   },
 
   async playVideo(videoId, hint = {}) {
@@ -692,7 +731,55 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     all[1 - active]!.engine.stop().catch(() => {});
     deck.gain = 1;
     applyVolumes();
-    const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay });
+    const target = {
+      title: entry.track.title,
+      artist: artistNames(entry.track),
+      album: entry.track.album?.name ?? null,
+      durationSec: entry.track.durationSec,
+    };
+
+    let playVideoId = entry.track.videoId;
+    if (playVideoId.startsWith('spotify:') || !/^[a-zA-Z0-9_-]{11}$/.test(playVideoId)) {
+      try {
+        const { searchSongs } = await import('@/data/music/api');
+        const { best } = await import('@/data/match/trackMatcher');
+        const { candidateOf } = await import('@/data/spotify/api');
+        const query = [target.title, target.artist].filter(Boolean).join(' ');
+        const hits = await searchSongs(query);
+        if (hits.length > 0) {
+          const scored = best(hits.map((c) => ({ ...candidateOf(c), track: c })), target);
+          const pick = scored?.track ?? hits[0];
+          if (pick?.videoId) {
+            playVideoId = pick.videoId;
+            entry.track.videoId = pick.videoId;
+            entry.track.thumbnail ||= pick.thumbnail;
+            entry.track.durationSec ||= pick.durationSec;
+            entry.track.unavailable = undefined;
+            usePlayer.setState((s) => ({ nowPlaying: hintOf(entry.track), queue: [...s.queue] }));
+
+            try {
+              const { useLocalPlaylists } = await import('@/data/music/localPlaylists');
+              const playlists = useLocalPlaylists.getState().playlists;
+              for (const pl of Object.values(playlists)) {
+                const tr = pl.tracks.find((t) => t.title === target.title);
+                if (tr && tr.videoId.startsWith('spotify:')) {
+                  tr.videoId = pick.videoId;
+                  tr.thumbnail ||= pick.thumbnail;
+                  tr.durationSec ||= pick.durationSec;
+                  tr.unavailable = undefined;
+                  useLocalPlaylists.getState().updatePlaylistTracks(pl.id, [...pl.tracks]);
+                  break;
+                }
+              }
+            } catch {}
+          }
+        }
+      } catch (err) {
+        trackLog.w(`On-the-fly track resolution failed: ${String(err)}`, playVideoId);
+      }
+    }
+
+    const track = await deck.engine.load(playVideoId, { startSec, autoplay, target });
     if (token !== loadToken) return;
     applyTrack(track, entry.track);
     if (!autoplay) usePlayer.setState({ status: 'paused' });
@@ -913,8 +1000,15 @@ function maybeCrossfade() {
   applyVolumes();
   trackLog.i(`crossfading into the next track over ${Math.round(remaining)}s`, entry.track.videoId);
 
+  const target = {
+    title: entry.track.title,
+    artist: artistNames(entry.track),
+    album: entry.track.album?.name ?? null,
+    durationSec: entry.track.durationSec,
+  };
+
   back.engine
-    .load(entry.track.videoId, { autoplay: true })
+    .load(entry.track.videoId, { autoplay: true, target })
     .then((track) => {
       if (!fade || fade.token !== token || !decks) return;
       fade.pending = false;
@@ -1032,6 +1126,41 @@ function bindElement(deck: Deck, n: number) {
   element.addEventListener('pause', () => {
     if (inFront() && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   });
+
+  // Playback stall watchdog: recovers if audio freezes in the middle of a track
+  let lastCurTime = -1;
+  let stallSeconds = 0;
+  setInterval(() => {
+    if (!inFront() || element.paused || element.ended || holding) {
+      stallSeconds = 0;
+      return;
+    }
+    if (lastCurTime >= 0 && Math.abs(element.currentTime - lastCurTime) < 0.05) {
+      stallSeconds++;
+      if (stallSeconds === 4) {
+        trackLog.w(`Playback stall detected at ${element.currentTime.toFixed(1)}s, nudging buffer...`);
+        element.currentTime += 0.2;
+        void element.play().catch(() => {});
+      } else if (stallSeconds >= 8) {
+        stallSeconds = 0;
+        const state = usePlayer.getState();
+        const entry = state.queue[state.index];
+        trackLog.w(`Playback stalled for 8s at ${element.currentTime.toFixed(1)}s, reloading stream...`);
+        if (entry) {
+          const target = {
+            title: entry.track.title,
+            artist: artistNames(entry.track),
+            album: entry.track.album?.name ?? null,
+            durationSec: entry.track.durationSec,
+          };
+          void deck.engine.load(entry.track.videoId, { startSec: element.currentTime, autoplay: true, target });
+        }
+      }
+    } else {
+      lastCurTime = element.currentTime;
+      stallSeconds = 0;
+    }
+  }, 1000);
 }
 
 // ---- Media Session (prompt §5.2 step 6) ---------------------------------------------

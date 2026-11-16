@@ -1,9 +1,10 @@
 import { ChevronRight, Users } from 'lucide-react';
-import { lazy, Suspense, useState, type ComponentType, type ReactNode } from 'react';
+import { lazy, Suspense, useSyncExternalStore, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { SiApplemusic, SiDiscord, SiSpotify, SiYoutubemusic } from 'react-icons/si';
 import { PageHeader } from '@/components/PageHeader';
 import { PrefetchLink } from '@/components/PrefetchLink';
+import { setThemePref, subscribeTheme, themePref, type ThemePref } from '@/lib/theme';
 import { useDiscord } from '@/extension/useDiscord';
 import { useExtension } from '@/extension/useExtension';
 import { useYtAuth } from '@/extension/useYtAuth';
@@ -12,15 +13,34 @@ import { useHistorySettings } from '@/playback/historyReporting';
 import { Select } from '@/components/Select';
 import { AUTOMIX_BARS } from '@/playback/automix/choices';
 import { CROSSFADE_CHOICES, usePlayer } from '@/state/player';
-import { AppleMusicIntegration, AppleMusicToggles, CanvasToggle, DiscordIntegration, LyricSourcesAccess, SpotifyIntegration, Toggle } from './IntegrationSettings';
+import { useSources } from '@/data/sources/store';
+import { AppleMusicIntegration, AppleMusicToggles, CanvasToggle, LyricSourcesAccess, SpotifyIntegration, Toggle } from './IntegrationSettings';
 import { settingsUi } from './settingsStyles';
 
 const LyricsSettings = lazy(() => import('@/shell/LyricsSettings').then((m) => ({ default: m.LyricsSettings })));
+const SourcesSettings = lazy(() => import('@/shell/SourcesSettings').then((m) => ({ default: m.SourcesSettings })));
 
-/** An integration's coloured glyph, as on the Extension page. */
+const THEME_CHOICES: { value: ThemePref; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+
+/**
+ * An integration's glyph, as on the Extension page: the brand hue tinted onto
+ * the card fill, so it stays legible in both themes. A literal brand fill
+ * (Spotify's green, Discord's blurple) would glow on the dark canvas, and a
+ * white plate would glare; the tint keeps the colour recognisable.
+ */
 function Glyph({ Icon, color, ink }: { Icon: ComponentType<{ size?: number }>; color: string; ink?: string }) {
   return (
-    <span className={settingsUi.integrationIcon} style={{ backgroundColor: color, ...(ink && { color: ink }) }}>
+    <span
+      className={settingsUi.integrationIcon}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${color} 16%, var(--bgPorcelain))`,
+        color: ink ?? color,
+      }}
+    >
       <Icon size={15} />
     </span>
   );
@@ -67,14 +87,20 @@ export default function SettingsPage() {
   const setShareHistory = useHistorySettings((s) => s.setShare);
   const { setAutoplay, setCrossfade, setAutomix, setAutomixBars, setShowNerdStats } = usePlayer.getState();
   const [lyrics, setLyrics] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const theme = useSyncExternalStore(subscribeTheme, themePref, () => 'system' as ThemePref);
+  const sourcesList = useSources((s) => s.sources);
+  const activeLossless = sourcesList.filter((s) => s.enabled && s.kind === 'addon').length;
   const present = extension.state === 'present';
   const discordText =
-    discord.state === 'ready' && discord.discord.connected
-      ? discord.discord.enabled
-        ? 'On'
-        : 'Off'
+    discord.state === 'checking'
+      ? 'Checking…'
       : discord.state === 'ready' && discord.discord.available
-        ? 'Not connected'
+        ? !discord.discord.connected
+          ? 'Discord not running'
+          : discord.discord.enabled
+            ? 'On'
+            : 'Off'
         : null;
 
   return (
@@ -84,17 +110,25 @@ export default function SettingsPage() {
         <h2 className={settingsUi.sectionHeader}>Account & Integrations</h2>
         <section className={settingsUi.group}>
           <div className={settingsUi.integration}>
-            <Glyph Icon={SiYoutubemusic} color="#ffffff" ink="#ff0033" />
+            <Glyph Icon={SiYoutubemusic} color="#E03131" />
             <span className={settingsUi.integrationName}>YouTube Music</span>
             <span className={settingsUi.value}>{youtubeText(yt)}</span>
           </div>
           <div className={settingsUi.integration}>
-            <Glyph Icon={SiSpotify} color="#1ed760" />
+            <Glyph Icon={SiSpotify} color="#1DB954" />
             <span className={settingsUi.integrationName}>Spotify</span>
             {present ? <SpotifyIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
           </div>
-          {present && discord.state === 'ready' && discord.discord.available && (
-            <LinkRow to="/settings/discord" icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Discord" value={discordText} />
+          {/* Shown while the presence query is still in flight: the row used to
+              appear only once `discord.state` had answered, so a cold start left
+              the whole Discord entry missing from Settings. */}
+          {present && discord.state !== 'unavailable' && (
+            <LinkRow
+              to="/settings/discord"
+              icon={<Glyph Icon={SiDiscord} color="#5865F2" />}
+              title="Discord"
+              value={discordText}
+            />
           )}
           <LinkRow
             to="/extension"
@@ -107,7 +141,7 @@ export default function SettingsPage() {
           <Toggle
             label="Share Listening Activity to YouTube"
             detail={
-              present && !extension.extension.info.capabilities.includes('yt.stats')
+              present && !extension.extension.info?.capabilities?.includes('yt.stats')
                 ? 'Update the BitChord extension to share: this version can’t send plays to YouTube.'
                 : 'Songs you play here go to your YouTube Music history and shape its recommendations.'
             }
@@ -136,6 +170,25 @@ export default function SettingsPage() {
             title="Listen Together"
             value={party.code ? `In party ${party.code}` : 'Listen in sync with friends'}
           />
+        </section>
+
+        <h2 className={settingsUi.sectionHeader}>Appearance</h2>
+        <section className={settingsUi.group}>
+          <label className={settingsUi.controlRow}>
+            <span>Theme</span>
+            <Select<ThemePref> label="Theme" value={theme} options={THEME_CHOICES} onChange={setThemePref} />
+          </label>
+        </section>
+
+        <h2 className={settingsUi.sectionHeader}>Audio Quality & Sources</h2>
+        <section className={settingsUi.group}>
+          <button className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} onClick={() => setSourcesOpen(true)}>
+            <span className={settingsUi.integrationName}>Sources (Lossless Add-ons)</span>
+            <span className={settingsUi.value}>
+              {activeLossless > 0 ? `${activeLossless} active · FLAC / Hi-Res` : 'YouTube Music only'}
+              <ChevronRight size={16} />
+            </span>
+          </button>
         </section>
 
         <h2 className={settingsUi.sectionHeader}>Playback</h2>
@@ -203,6 +256,14 @@ export default function SettingsPage() {
         <Suspense fallback={null}>
           <LyricsSettings onClose={() => setLyrics(false)} />
         </Suspense>
+
+      )}
+      {sourcesOpen && (
+        <Suspense fallback={null}>
+          <SourcesSettings onClose={() => setSourcesOpen(false)} />
+        </Suspense>
+
+
       )}
     </div>
   );

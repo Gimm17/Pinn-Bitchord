@@ -9,9 +9,14 @@ import { TrackMenu } from './TrackMenu';
 
 const isPlayable = (item: MusicItem) => item.kind === 'song' || item.kind === 'video';
 
-/* Lockups (report §2). */
-const lockup = 'flex min-w-0 flex-col';
-const caption = 'mt-2 flex min-w-0 flex-col gap-px';
+/* Lockups (report §2).
+ *
+ * The reference frames every shelf item as a white card — border, 16px radius,
+ * 8px inset — with the artwork inside it and the caption under the artwork but
+ * still inside the card. On the artboards that frame is what carries the white
+ * surface (21% of the Home artboard against 6% for everything else). */
+const lockup = 'flex min-w-0 flex-col rounded-2xl border border-border-subtle bg-porcelain p-2';
+const caption = 'mt-2 flex min-w-0 flex-col gap-px px-1.5 pb-1';
 const title = 'flex min-w-0 items-center type-callout [&>:first-child]:truncate';
 const subtitle = 'truncate type-callout text-secondary';
 const overlayLink = 'absolute inset-0 z-1 rounded-[inherit]';
@@ -166,7 +171,7 @@ export function TrackLockup({ item, onPlay }: { item: MusicItem; onPlay?: () => 
       {isPlayable(item) && (
         <TrackMenu
           track={toTrack(item)}
-          className="grid size-7 place-items-center rounded-full text-key opacity-0 transition-opacity duration-100 ease-in group-hover/track:opacity-100 focus-visible:opacity-100 hover:bg-quinary data-open:opacity-100"
+          className="grid size-7 place-items-center rounded-full text-accent-ink opacity-0 transition-opacity duration-100 ease-in group-hover/track:opacity-100 focus-visible:opacity-100 hover:bg-quinary data-open:opacity-100"
         />
       )}
     </div>

@@ -156,6 +156,7 @@ export interface DiscordNowPlaying {
   positionMs: number;
   durationMs: number;
   playbackRate: number;
+  quality?: string | null;
 }
 
 /** Pushed by the extension over the event channel (`Bridge.subscribe`). */

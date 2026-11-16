@@ -30,7 +30,7 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
     const check = () =>
       void getBridge()
         ?.call('lyrics.permissions', { origins: EXTENSION_ORIGINS })
-        .then((r) => setGranted(r.granted))
+        .then((r) => setGranted(Array.isArray(r?.granted) ? r.granted : []))
         .catch(() => setGranted(null));
     check();
     window.addEventListener('focus', check);
@@ -42,7 +42,7 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
 
-  const missing = granted ? EXTENSION_ORIGINS.filter((o) => !granted.includes(o)) : [];
+  const missing = Array.isArray(granted) ? EXTENSION_ORIGINS.filter((o) => !granted.includes(o)) : [];
 
   return createPortal(
     // A modal (report §8): scrim, 14px card radius, fade with a slight zoom, 30px close circle.
@@ -55,7 +55,7 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
       >
         <header className="flex items-center justify-between px-5 pt-[18px] pb-2">
           <h2 className="type-title-2-emphasized">Lyrics</h2>
-          <button className="grid size-[30px] place-items-center rounded-full bg-[#333336] text-secondary" aria-label="Close" onClick={onClose}>
+          <button className="grid size-[30px] place-items-center rounded-full bg-quinary text-secondary hover:text-primary" aria-label="Close" onClick={onClose}>
             <X size={16} />
           </button>
         </header>
@@ -106,7 +106,7 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
                 KuGou, Musixmatch, Genius and PaxSenix don’t let web pages ask them directly. Allow the extension to,
                 once.
               </p>
-              <button className="flex-none rounded-[14px] bg-key px-3.5 py-1.5 type-callout-emphasized text-white" onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins: missing })}>
+              <button className="flex-none rounded-[14px] bg-key px-3.5 py-1.5 type-callout-emphasized text-on-accent" onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins: missing })}>
                 Allow
               </button>
             </div>
@@ -125,7 +125,7 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
             autoComplete="off"
           />
 
-          <button className="mt-[18px] type-callout-emphasized text-key" onClick={reset}>
+          <button className="mt-[18px] type-callout-emphasized text-accent-ink" onClick={reset}>
             Restore Defaults
           </button>
         </div>

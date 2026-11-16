@@ -20,7 +20,7 @@ function detected(): DetectedExtension | null {
   return queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey) ?? null;
 }
 
-const supported = (extension: DetectedExtension | null) => !!extension?.info.capabilities.includes('discord');
+const supported = (extension: DetectedExtension | null) => !!extension?.info?.capabilities?.includes('discord');
 
 const adopt = (state: DiscordState) => queryClient.setQueryData(discordQueryKey, state);
 
@@ -42,7 +42,16 @@ export function useDiscord(): DiscordStatus {
   const extension = useExtension();
   const present = extension.state === 'present' ? extension.extension : null;
   const enabled = supported(present);
-  const query = useQuery({ queryKey: discordQueryKey, queryFn: readState, enabled, staleTime: 30_000, refetchOnWindowFocus: true });
+  const query = useQuery({
+    queryKey: discordQueryKey,
+    queryFn: readState,
+    enabled,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    // The desktop bridge reports the local Discord client, which can start or
+    // quit while the app is open; poll only while it is missing.
+    refetchInterval: (q) => (q.state.data && !q.state.data.connected ? 5000 : false),
+  });
 
   useEffect(() => {
     if (!present || !enabled) return;
@@ -80,7 +89,7 @@ export const DEFAULT_DISCORD_OPTIONS: DiscordPresenceOptions = {
   activityType: 'listening',
   status: 'online',
   useDetails: false,
-  activityName: '',
+  activityName: 'BitChord',
   button1Text: '',
   button1Visible: true,
   button2Text: '',
@@ -100,6 +109,15 @@ export const useDiscordOptions = create<DiscordOptionsStore>()(
       set: (change) => set((s) => ({ options: { ...s.options, ...change } })),
       reset: () => set({ options: DEFAULT_DISCORD_OPTIONS }),
     }),
-    { name: 'bitchord:discord', version: 1 },
+    {
+      name: 'bitchord:discord',
+      version: 2,
+      migrate: (p: any) => {
+        if (p?.options?.activityName?.toLowerCase?.() === 'chamomile') {
+          p.options.activityName = 'BitChord';
+        }
+        return p;
+      },
+    },
   ),
 );

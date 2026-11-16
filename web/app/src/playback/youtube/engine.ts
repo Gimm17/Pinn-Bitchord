@@ -26,7 +26,7 @@ export interface LoadedTrack {
   durationSec: number;
   /** Largest first. */
   thumbnails: { url: string; width: number; height: number }[];
-  client: PlayerClientName;
+  client: PlayerClientName | string;
   /** The audio format actually selected, e.g. "251 opus 140kbps". */
   format: string;
   /** The same, field by field, for stats for nerds. */
@@ -128,14 +128,15 @@ export class YouTubeEngine {
       // the body built at 0.4s). With no Shaka-level retries, the failure
       // callback restarts streaming instead, which builds a fresh request.
       streaming: {
-        bufferingGoal: 120,
-        rebufferingGoal: 0.01,
-        bufferBehind: 300,
-        retryParameters: { maxAttempts: 1, baseDelay: 1000, backoffFactor: 1, fuzzFactor: 0.5, timeout: 30_000 },
+        bufferingGoal: 20,
+        rebufferingGoal: 0.5,
+        bufferBehind: 15,
+        retryParameters: { maxAttempts: 5, baseDelay: 800, backoffFactor: 1.5, fuzzFactor: 0.3, timeout: 30_000 },
         // A refusal is handled by moving to the next client (onShakaError);
         // retrying it would only collect more 403s.
         failureCallback: (error: shaka.util.Error) => {
           if (!isRefusal(error)) player.retryStreaming(RETRY_STREAMING_SECONDS);
+          else this.onShakaError(error);
         },
       },
     });
@@ -156,11 +157,102 @@ export class YouTubeEngine {
    * actually flowing; rejects with [UnplayableError] for a settled "no",
    * [SupersededError] if another load replaced this one.
    */
-  async load(videoId: string, { startSec = 0, autoplay = true } = {}): Promise<LoadedTrack> {
+  async load(
+    videoId: string,
+    {
+      startSec = 0,
+      autoplay = true,
+      target,
+    }: {
+      startSec?: number;
+      autoplay?: boolean;
+      target?: { title: string; artist?: string; album?: string | null; durationSec?: number | null };
+    } = {},
+  ): Promise<LoadedTrack> {
     const generation = ++this.generation;
     this.loading = true;
     const started = performance.now();
     trackLog.i(`loading at ${startSec.toFixed(1)}s`, videoId);
+
+    // Probe configured lossless addon sources first
+    if (target?.title) {
+      try {
+        const { resolveLosslessSource } = await import('@/data/sources/resolver');
+        const excludedSources = new Set<string>();
+
+        while (true) {
+          const lossless = await resolveLosslessSource(
+            {
+              title: target.title,
+              artist: target.artist,
+              album: target.album,
+              durationSec: target.durationSec,
+            },
+            excludedSources,
+          );
+
+          if (!lossless) break;
+
+          this.checkCurrent(generation);
+          try {
+            const track = await this.startLosslessStream(lossless, target, videoId, startSec, autoplay, generation);
+            trackLog.i(
+              `playing lossless via ${track.client}, ${track.format}, first audio after ${Math.round(performance.now() - started)}ms`,
+              videoId,
+            );
+            return track;
+          } catch (losslessErr) {
+            trackLog.w(
+              `lossless stream from "${lossless.sourceName}" failed or rejected: ${describe(losslessErr)}, trying next source`,
+              videoId,
+            );
+            excludedSources.add(lossless.sourceId);
+          }
+        }
+      } catch (err) {
+        trackLog.w(`lossless resolution failed: ${describe(err)}, falling back to YouTube Music`, videoId);
+      }
+    }
+
+    if (videoId.startsWith('spotify:') || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+      if (target?.title) {
+        try {
+          const { searchSongs } = await import('@/data/music/api');
+          const { best } = await import('@/data/match/trackMatcher');
+          const { candidateOf } = await import('@/data/spotify/api');
+          const query = [target.title, target.artist].filter(Boolean).join(' ');
+          const hits = await searchSongs(query);
+          if (hits.length > 0) {
+            const scored = best(hits.map((c) => ({ ...candidateOf(c), track: c })), target);
+            const pick = scored?.track ?? hits[0];
+            if (pick?.videoId) {
+              trackLog.i(`engine resolved "${query}" (${videoId}) -> ${pick.videoId}`, videoId);
+              videoId = pick.videoId;
+            }
+          }
+        } catch (resolveErr) {
+          trackLog.w(`engine on-the-fly resolution failed: ${describe(resolveErr)}`, videoId);
+        }
+      }
+    }
+
+    return this.loadYouTubeStream(videoId, { startSec, autoplay, generation, started });
+  }
+
+  private async loadYouTubeStream(
+    videoId: string,
+    {
+      startSec = 0,
+      autoplay = true,
+      generation,
+      started = performance.now(),
+    }: {
+      startSec?: number;
+      autoplay?: boolean;
+      generation: number;
+      started?: number;
+    },
+  ): Promise<LoadedTrack> {
     try {
       const player = await this.ensurePlayer();
       this.yt ??= await timed('InnerTube session', videoId, getInnertube);
@@ -215,6 +307,82 @@ export class YouTubeEngine {
     if (generation !== this.generation) throw new SupersededError('Replaced by a newer load');
   }
 
+  private async startLosslessStream(
+    resolved: import('@/data/sources/types').ResolvedSourceStream,
+    target: { title: string; artist?: string; album?: string | null; durationSec?: number | null },
+    videoId: string,
+    startSec: number,
+    autoplay: boolean,
+    generation: number,
+  ): Promise<LoadedTrack> {
+    const player = await this.ensurePlayer();
+    await player.unload();
+    this.audio.removeAttribute('src');
+    this.adapter?.dispose();
+    this.adapter = null;
+    this.current = { videoId, client: resolved.sourceName as any, signed: false };
+    this.direct = null;
+
+    this.audio.src = resolved.streamUrl;
+    if (startSec > 0) {
+      this.audio.currentTime = startSec;
+    }
+    if (autoplay) {
+      await this.audio.play().catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+          trackLog.w('autoplay was blocked by the browser; waiting for a tap', videoId);
+        } else throw error;
+      });
+    }
+    await this.firstAudio(generation);
+
+    // Guard against 30-second sample previews:
+    // If the expected song is a full track (> 45s), but the audio stream is <= 35s,
+    // it is an unauthorized or geo-restricted sample snippet (common with Qobuz/Tidal previews).
+    const expectedSec = target.durationSec ?? 0;
+    const actualSec = this.audio.duration;
+    if (expectedSec > 45 && Number.isFinite(actualSec) && actualSec > 0 && actualSec <= 35) {
+      this.audio.pause();
+      this.audio.removeAttribute('src');
+      this.audio.load();
+      throw new Error(`Stream is only a ${Math.round(actualSec)}s sample preview (expected full song ${expectedSec}s)`);
+    }
+
+    const onLosslessError = () => {
+      if (generation !== this.generation) return;
+      trackLog.w(`lossless stream aborted mid-track; seamlessly falling back to YouTube Music`, videoId);
+      const resumeAt = this.audio.currentTime;
+      const wasPlaying = !this.audio.paused;
+      this.loadYouTubeStream(videoId, { startSec: resumeAt, autoplay: wasPlaying, generation })
+        .then((t) => this.onRecovered(t))
+        .catch((e) => {
+          if (e instanceof SupersededError) return;
+          this.onFatal(videoId, describe(e), false);
+        });
+    };
+    this.audio.addEventListener('error', onLosslessError, { once: true });
+
+    return {
+      videoId,
+      title: target.title,
+      author: target.artist ?? '',
+      durationSec: resolved.durationSec || target.durationSec || Math.round(this.audio.duration || 0),
+      thumbnails: [],
+      client: resolved.sourceName as any,
+      format: resolved.qualityText,
+      stream: {
+        codec: resolved.codec,
+        itag: null,
+        bitrateKbps: resolved.bitDepth ? Math.round(((resolved.sampleRateHz ?? 44100) * resolved.bitDepth * 2) / 1000) : 921,
+        sampleRateHz: resolved.sampleRateHz || 44100,
+        channels: 2,
+        mode: 'direct',
+        bitDepth: resolved.bitDepth || 16,
+      } as any,
+      loudnessDb: null,
+    };
+  }
+
   private async startStream(
     player: shaka.Player,
     resolved: ResolvedPlayer,
@@ -224,6 +392,7 @@ export class YouTubeEngine {
   ): Promise<LoadedTrack> {
     const { videoId, client, info, signed } = resolved;
     await player.unload();
+    this.audio.removeAttribute('src');
     this.adapter?.dispose();
     this.adapter = null;
     this.current = { videoId, client, signed };
@@ -444,12 +613,13 @@ export class YouTubeEngine {
   private onShakaError(error: shaka.util.Error) {
     const current = this.current;
     const line = `Shaka error ${error.code} (severity ${error.severity}): ${describe(error)}`;
-    if (!isRefusal(error)) {
+    const isCritical = error.severity === shaka.util.Error.Severity.CRITICAL;
+    if (!isRefusal(error) && !isCritical) {
       trackLog.d(line, current?.videoId ?? null);
       return;
     }
     trackLog.w(line, current?.videoId ?? null);
-    if (this.loading || !current || error.severity !== shaka.util.Error.Severity.CRITICAL) return;
+    if (this.loading || !current) return;
     // Recover once per track and client; later errors from the same stream are echoes.
     this.current = null;
     excludeClient(current.videoId, current.client, `stream error ${error.code}`, current.signed);

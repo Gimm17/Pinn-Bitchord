@@ -1,0 +1,66 @@
+# Permissions for BitChord custom commands
+
+[default]
+description = "Default permissions for BitChord app commands"
+permissions = [
+  "allow-bridge-ping",
+  "allow-bridge-http",
+  "allow-bridge-auth-state",
+  "allow-bridge-discord-presence",
+  "allow-bridge-discord-status",
+  "allow-bridge-discord-set-enabled",
+  "allow-bridge-party-connect",
+  "allow-bridge-party-send",
+  "allow-bridge-party-close",
+  "allow-bridge-party-http"
+]
+
+[[permission]]
+identifier = "allow-bridge-ping"
+description = "Allows bridge_ping command"
+commands.allow = ["bridge_ping"]
+
+[[permission]]
+identifier = "allow-bridge-http"
+description = "Allows bridge_http command"
+commands.allow = ["bridge_http"]
+
+[[permission]]
+identifier = "allow-bridge-auth-state"
+description = "Allows bridge_auth_state command"
+commands.allow = ["bridge_auth_state"]
+
+[[permission]]
+identifier = "allow-bridge-discord-presence"
+description = "Allows bridge_discord_presence command"
+commands.allow = ["bridge_discord_presence"]
+
+[[permission]]
+identifier = "allow-bridge-discord-status"
+description = "Allows bridge_discord_status command"
+commands.allow = ["bridge_discord_status"]
+
+[[permission]]
+identifier = "allow-bridge-discord-set-enabled"
+description = "Allows bridge_discord_set_enabled command"
+commands.allow = ["bridge_discord_set_enabled"]
+
+[[permission]]
+identifier = "allow-bridge-party-connect"
+description = "Allows bridge_party_connect command"
+commands.allow = ["bridge_party_connect"]
+
+[[permission]]
+identifier = "allow-bridge-party-send"
+description = "Allows bridge_party_send command"
+commands.allow = ["bridge_party_send"]
+
+[[permission]]
+identifier = "allow-bridge-party-close"
+description = "Allows bridge_party_close command"
+commands.allow = ["bridge_party_close"]
+
+[[permission]]
+identifier = "allow-bridge-party-http"
+description = "Allows bridge_party_http command"
+commands.allow = ["bridge_party_http"]

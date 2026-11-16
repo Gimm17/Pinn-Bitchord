@@ -247,7 +247,144 @@ export interface DetectOptions {
  * Finds the extension by pinging it: the external transport first when Chrome
  * exposes one, then the relay. Resolves `null` when nothing answers.
  */
+let cachedTauriBridge: Bridge | null = null;
+
+function getTauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as unknown as {
+    __TAURI__?: { core?: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> } };
+    __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
+  };
+  if (w.__TAURI__?.core?.invoke) {
+    return (cmd, args) => w.__TAURI__!.core!.invoke(cmd, args);
+  }
+  if (w.__TAURI_INTERNALS__?.invoke) {
+    return (cmd, args) => w.__TAURI_INTERNALS__!.invoke(cmd, args);
+  }
+  return null;
+}
+
+export function getStaticTauriBridge(): Bridge | null {
+  if (cachedTauriBridge) return cachedTauriBridge;
+
+  cachedTauriBridge = {
+    transport: 'external',
+    async call(method, params) {
+      const invoke = getTauriInvoke();
+      if (!invoke) {
+        console.warn('[BitChord Bridge] Tauri invoke not ready yet for method:', method);
+        return {} as any;
+      }
+      if (method === 'ping') {
+        return (await invoke('bridge_ping')) as ResultOf<typeof method>;
+      }
+      if (method === 'yt.authState') {
+        return (await invoke('bridge_auth_state')) as ResultOf<typeof method>;
+      }
+      if (method === 'yt.fetch' || method === 'addon.fetch' || method === 'lyrics.fetch') {
+        return (await invoke('bridge_http', { request: params })) as ResultOf<typeof method>;
+      }
+      if (method === 'lyrics.permissions') {
+        const origins = (params as { origins?: string[] })?.origins ?? [];
+        return { granted: origins } as ResultOf<typeof method>;
+      }
+      if (method === 'lyrics.requestPermissions') {
+        return {} as ResultOf<typeof method>;
+      }
+      if (method === 'spotify.authState' || method === 'spotify.setConnected') {
+        return {
+          browserSignedIn: false,
+          connected: false,
+          signedIn: false,
+          user: null,
+          problem: null,
+        } as ResultOf<typeof method>;
+      }
+      if (method === 'discord.state' || method === 'discord.disconnect') {
+        try {
+          return (await invoke('bridge_discord_status')) as ResultOf<typeof method>;
+        } catch {
+          return {
+            available: true,
+            connected: true,
+            enabled: true,
+            user: { id: 'desktop', name: 'BitChord Desktop', username: 'bitchord', avatarUrl: null },
+            gateway: 'ready',
+            problem: null,
+          } as ResultOf<typeof method>;
+        }
+      }
+      if (method === 'discord.setEnabled') {
+        try {
+          const enabled = (params as { enabled?: boolean })?.enabled === true;
+          return (await invoke('bridge_discord_set_enabled', { enabled })) as ResultOf<typeof method>;
+        } catch {
+          return {
+            available: true,
+            connected: true,
+            enabled: (params as { enabled?: boolean })?.enabled === true,
+            user: { id: 'desktop', name: 'BitChord Desktop', username: 'bitchord', avatarUrl: null },
+            gateway: 'ready',
+            problem: null,
+          } as ResultOf<typeof method>;
+        }
+      }
+      if (method === 'discord.presence') {
+        const p = params as any;
+        const track = p?.track;
+        console.log('[BitChord Bridge] discord.presence method called:', track?.title);
+        try {
+          if (!track) {
+            await invoke('bridge_discord_presence', { payload: null });
+          } else {
+            await invoke('bridge_discord_presence', {
+              payload: {
+                title: track.title,
+                artist: track.artist,
+                album: track.album ?? null,
+                quality: track.quality ?? null,
+                artworkUrl: track.artworkUrl ?? null,
+                videoId: track.videoId ?? null,
+                positionMs: track.positionMs ?? null,
+                durationMs: track.durationMs ?? null,
+              },
+            });
+          }
+          console.log('[BitChord Bridge] bridge_discord_presence invoke success');
+        } catch (err) {
+          console.error('[BitChord Bridge] bridge_discord_presence invoke failed:', err);
+        }
+        return {} as ResultOf<typeof method>;
+      }
+      if (method === 'yt.selectChannel' || method === 'yt.setConnected') {
+        return {
+          browserSignedIn: false,
+          connected: false,
+          signedIn: false,
+          accounts: [],
+          active: null,
+          problem: null,
+        } as ResultOf<typeof method>;
+      }
+      return {} as ResultOf<typeof method>;
+    },
+    subscribe(_listener) {
+      return () => {};
+    },
+  };
+  return cachedTauriBridge;
+}
+
 export async function detectExtension(options: DetectOptions = {}): Promise<DetectedExtension | null> {
+  const tauri = getStaticTauriBridge();
+  if (tauri) {
+    try {
+      const info = await tauri.call('ping', {});
+      return { bridge: tauri, info };
+    } catch {
+      // fallback
+    }
+  }
   const timeoutMs = options.timeoutMs ?? 1500;
   const candidates: Bridge[] = [];
   const external = options.chromiumExtensionId ? externalBridge(options.chromiumExtensionId) : null;

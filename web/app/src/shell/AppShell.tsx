@@ -4,14 +4,19 @@ import { startPartySync } from '@/party/partySync';
 import { useDiscordPresence } from '@/playback/discordPresence';
 import { startHistoryReporting } from '@/playback/historyReporting';
 import { startLivePresence } from '@/playback/livePresence';
+import { discordGatewayManager } from '@/playback/discordGateway';
 import { Outlet } from 'react-router';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { config } from '@/config';
 import { useExtension } from '@/extension/useExtension';
 import { isMobileBrowser } from '@/lib/platform';
 import { useUi } from '@/state/ui';
+import { ToastContainer } from '@/components/Toast';
+import { SpotifyImportModal } from '@/components/music/SpotifyImportModal';
+import { FloatingNerdModal } from './NerdStats';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { Banner, bannerButtonClass } from './Banner';
+import { DesktopHeader } from './DesktopHeader';
 import { MobileTopBar } from './MobileTopBar';
 import { PlayerBar } from './PlayerBar';
 import { SidePanel } from './SidePanel';
@@ -19,29 +24,30 @@ import { Sidebar } from './Sidebar';
 
 const mobile = isMobileBrowser();
 
-// It carries am-lyrics; loaded the first time it opens, as the side panel's lyrics are.
 const FullScreenPlayer = lazy(() => import('./FullScreenPlayer').then((m) => ({ default: m.FullScreenPlayer })));
 
 /**
- * The app frame (report §1): glass sidebar, the scrolling page, the floating
- * player pill, the side panel, and the bottom band when there is one.
+ * The app frame: Light Ceramic & Frosted Sage Edition
+ * Spacious, organic, non-boxy architecture
  */
 export function AppShell() {
   useKeyboardShortcuts();
   useDiscordPresence();
-  // Listen Together: pick a party back up after a reload, and keep the player in step with it.
+  useEffect(() => {
+    discordGatewayManager.init();
+  }, []);
   useEffect(() => {
     resumeSession();
     return startPartySync();
   }, []);
-  // Plays into the account's YouTube Music history (Settings › Share Listening Activity).
   useEffect(() => startHistoryReporting(), []);
-  // Counts this tab in the "listening now" figure beside the phone and PC apps.
   useEffect(() => startLivePresence(), []);
+
   const extension = useExtension();
   const bannerDismissed = useUi((s) => s.installBannerDismissed);
   const dismissBanner = useUi((s) => s.dismissInstallBanner);
   const fullScreen = useUi((s) => s.fullScreen);
+  const sidePanelOpen = useUi((s) => s.sidePanel !== null);
 
   let banner = null;
   if (mobile) {
@@ -72,24 +78,38 @@ export function AppShell() {
   }
 
   return (
-    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
-      {/* The side panel slides in from beyond the right edge; never let it scroll the page. */}
-      <div className="relative min-h-0 overflow-hidden">
+    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] bg-page text-primary select-none overflow-hidden font-sans">
+      <div className="relative min-h-0 overflow-hidden bg-page">
         <Sidebar />
         <MobileTopBar />
-        {/* The page scrolls under the fixed sidebar and the floating player. */}
+
+        {/* Desktop Top Header Frame */}
+        <div className="absolute inset-x-0 top-0 left-(--web-navigation-width) z-[calc(var(--z-web-chrome)-2)] max-sm:hidden">
+          <DesktopHeader />
+        </div>
+
+        {/* The page scrolls under the fixed sidebar and the top header. */}
         <main
           id="scrollable-page"
-          className="absolute inset-0 overflow-x-hidden overflow-y-auto pl-(--web-navigation-width) [scrollbar-gutter:stable] data-tint:bg-(--page-tint) data-tint:transition-[background-color] data-tint:duration-300 data-tint:ease-in max-sm:pt-(--mobile-top-bar-height) max-sm:pl-0"
+          className={`absolute inset-0 overflow-x-hidden overflow-y-auto pl-(--web-navigation-width) pt-12 [scrollbar-gutter:stable] bg-page transition-[padding] duration-300 ease-out max-sm:pt-(--mobile-top-bar-height) max-sm:pl-0 ${
+            sidePanelOpen ? 'xl:pr-[380px]' : 'pr-0'
+          }`}
         >
-          {/* Clears the floating pill: its height, its offset, and some air. */}
-          <div className="min-h-full pb-[calc(var(--player-pill-height)+var(--player-bottom-offset)+40px)]">
+          <div className="min-h-full pb-16">
             <Outlet />
           </div>
         </main>
-        <PlayerBar />
+
+        {/* Dynamic Slide-in Side Panel for Lyrics & Queue */}
         <SidePanel />
+
+        <ToastContainer />
+        <SpotifyImportModal />
+        <FloatingNerdModal />
       </div>
+      {/* Its own grid row, not a fixed overlay: an overlay would sit under the
+          sidebar (z-web-chrome) and lose the artwork and titles on the left. */}
+      <PlayerBar />
       {banner}
       {fullScreen && (
         <Suspense fallback={null}>

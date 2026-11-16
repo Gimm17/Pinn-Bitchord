@@ -66,6 +66,8 @@ export function youtubeRules(initiatorDomains: string[]): Rule[] {
     // at all, as InnerTubeX does on Android (buildHeaders sends nothing for
     // VISIONOS); a YouTube web Origin on them is refused with 403 mid-track.
     rule(7, '||googlevideo.com/*c=VISIONOS', [remove('Origin'), remove('Referer')], XHR_AND_MEDIA, 2),
+    rule(8, '||googlevideo.com/*c=IOS', [remove('Origin'), remove('Referer')], XHR_AND_MEDIA, 2),
+    rule(9, '||googlevideo.com/*c=ANDROID', [remove('Origin'), remove('Referer')], XHR_AND_MEDIA, 2),
   ];
 }
 

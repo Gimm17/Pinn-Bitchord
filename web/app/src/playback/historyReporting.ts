@@ -62,7 +62,7 @@ const newCpn = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) 
 
 function extensionSupportsStats(): boolean {
   const detected = queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey);
-  return !!detected?.info.capabilities.includes('yt.stats');
+  return !!detected?.info?.capabilities?.includes('yt.stats');
 }
 
 type Raw = Record<string, unknown>;

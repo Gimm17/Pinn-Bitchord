@@ -58,13 +58,40 @@ const YOUTUBE_HOSTS = new Set(['music.youtube.com', 'www.youtube.com', 'youtube.
 /** Headers a page may send without triggering a CORS preflight. */
 const SAFELISTED = new Set(['accept', 'accept-language', 'content-language']);
 
+async function fetchViaBridge(
+  bridge: ReturnType<typeof getBridge> & {},
+  url: URL,
+  request: Request | null,
+  init?: RequestInit,
+  auth = false,
+): Promise<Response> {
+  const method = (init?.method ?? request?.method ?? 'GET').toUpperCase() as 'GET' | 'POST' | 'HEAD';
+  const headers: Record<string, string> = {};
+  new Headers(init?.headers ?? request?.headers).forEach((value, key) => (headers[key] = value));
+  let body = init?.body ?? undefined;
+  if (body === undefined && request && method !== 'GET' && method !== 'HEAD') {
+    body = await request.text();
+  }
+  if (body != null && typeof body !== 'string') {
+    body = await new Response(body).text();
+  }
+
+  const response = await bridge.call(
+    'yt.fetch',
+    { url: url.toString(), method, headers, ...(typeof body === 'string' && { body }), auth },
+    { ...(init?.signal && { signal: init.signal }) },
+  );
+  const payload = response.bodyEncoding === 'base64' ? decodeBase64(response.body) : response.body;
+  return new Response(response.status === 204 || response.status === 304 ? null : payload, {
+    status: response.status,
+    headers: response.headers,
+  });
+}
+
 /**
- * youtubei answers CORS preflights with 400 (measured; web/fixtures/README.md),
- * so InnerTube calls must be "simple" requests: a text/plain body and no
- * custom headers. youtubei parses the JSON body regardless of the declared
- * type, and everything the dropped headers carried (client name and version,
- * visitor data) is also in the body's `context.client`. Origin, Referer and
- * X-Origin are added by the extension's rule.
+ * InnerTube calls fetch handler. When running in Desktop (Tauri) or with bridge,
+ * routes requests through the native HTTP bridge to completely bypass browser CORS
+ * and inject required Origin/Referer headers.
  */
 async function simpleRequestFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const request = input instanceof Request ? input : null;
@@ -72,6 +99,15 @@ async function simpleRequestFetch(input: RequestInfo | URL, init?: RequestInit):
 
   if (!YOUTUBE_HOSTS.has(url.hostname) || url.pathname.startsWith('/api/jnn/')) {
     return fetch(input, init);
+  }
+
+  const bridge = getBridge();
+  if (bridge) {
+    try {
+      return await fetchViaBridge(bridge, url, request, init, false);
+    } catch (e) {
+      console.warn('Bridge fetch failed, trying direct fetch:', e);
+    }
   }
 
   const method = init?.method ?? request?.method ?? 'GET';
@@ -113,23 +149,7 @@ async function signedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
 
   const bridge = getBridge();
   if (!bridge) throw new Error('Signed-in requests need the BitChord extension');
-  const method = (init?.method ?? request?.method ?? 'GET').toUpperCase() as 'GET' | 'POST';
-  const headers: Record<string, string> = {};
-  new Headers(init?.headers ?? request?.headers).forEach((value, key) => (headers[key] = value));
-  let body = init?.body ?? undefined;
-  if (body === undefined && request && method !== 'GET') body = await request.text();
-  if (body != null && typeof body !== 'string') body = await new Response(body).text();
-
-  const response = await bridge.call(
-    'yt.fetch',
-    { url: url.toString(), method, headers, ...(typeof body === 'string' && { body }), auth: true },
-    { ...(init?.signal && { signal: init.signal }) },
-  );
-  const payload = response.bodyEncoding === 'base64' ? decodeBase64(response.body) : response.body;
-  return new Response(response.status === 204 || response.status === 304 ? null : payload, {
-    status: response.status,
-    headers: response.headers,
-  });
+  return fetchViaBridge(bridge, url, request, init, true);
 }
 
 async function isFirstRun(): Promise<boolean> {

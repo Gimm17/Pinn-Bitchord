@@ -37,7 +37,7 @@ export const settingsUi = {
   integration: `${integration} grid-cols-[24px_minmax(0,1fr)_auto]`,
   /** An integration row without the icon square. */
   integrationPlain: `${integration} grid-cols-[minmax(0,1fr)_auto]`,
-  integrationIcon: 'grid size-6 place-items-center rounded-[6px] text-white',
+  integrationIcon: 'grid size-6 place-items-center rounded-[6px]',
   integrationName: 'min-w-0',
   /** Settings: an integration row that opens a page of its own. */
   linkRow: 'w-full cursor-pointer text-start hover:bg-quaternary',

@@ -15,3 +15,6 @@ interface ImportMeta {
 
 /** Injected by vite.config.ts from web/extension/dev-key/extension-id.txt. */
 declare const DEV_EXTENSION_ID: string;
+
+/** Injected by vite.config.ts from web/src-tauri/tauri.conf.json's `version`. */
+declare const __APP_VERSION__: string;

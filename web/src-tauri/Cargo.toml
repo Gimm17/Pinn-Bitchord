@@ -1,0 +1,33 @@
+[package]
+name = "bitchord"
+version = "0.1.0"
+description = "BitChord Desktop - Modern YouTube Music Player"
+authors = ["kushagrasinghx"]
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.12.5", features = ["devtools", "tray-icon"] }
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+base64 = "0.22"
+# The party client. A request from Rust carries no Origin header, which is what
+# the party server's origin allowlist requires of a browser — so the desktop
+# speaks to the same server the native Android app does.
+tokio = { version = "1", features = ["sync", "macros", "rt"] }
+tokio-tungstenite = { version = "0.30", default-features = false, features = [
+    "connect",
+    "rustls-tls-webpki-roots",
+] }
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }

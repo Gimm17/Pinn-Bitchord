@@ -72,6 +72,8 @@ export function useScrubber() {
   const bar = useRef<HTMLDivElement>(null);
   const elapsed = useRef<HTMLSpanElement>(null);
   const remaining = useRef<HTMLSpanElement>(null);
+  /** The track's whole length, where the reference puts it at the bar's right end. */
+  const total = useRef<HTMLSpanElement>(null);
   /** "Mixing", in the times' place while an Automix blend runs (the phone's MixingLabel). */
   const mixLabel = useRef<HTMLSpanElement>(null);
   const pulse = useRef<Pulse>({ cover: 0, depth: 0, phase: 0, locked: false, last: performance.now() });
@@ -99,7 +101,8 @@ export function useScrubber() {
       element.style.opacity = mix.active ? String(mix.alpha) : '';
       if (elapsed.current) elapsed.current.textContent = clock(time);
       if (remaining.current) remaining.current.textContent = `-${clock((duration || 0) - time)}`;
-      for (const span of [elapsed.current, remaining.current]) {
+      if (total.current) total.current.textContent = clock(duration || 0);
+      for (const span of [elapsed.current, remaining.current, total.current]) {
         if (span) span.style.opacity = mix.active ? String(1 - mix.cover) : '';
       }
       if (mixLabel.current) mixLabel.current.style.opacity = mix.active ? String(mix.cover * (0.35 + 0.65 * mix.alpha)) : '0';
@@ -137,5 +140,5 @@ export function useScrubber() {
     onPointerCancel: () => setDragging(null),
   };
 
-  return { bar, elapsed, remaining, mixLabel, dragging: dragging !== null, handlers };
+  return { bar, elapsed, remaining, total, mixLabel, dragging: dragging !== null, handlers };
 }

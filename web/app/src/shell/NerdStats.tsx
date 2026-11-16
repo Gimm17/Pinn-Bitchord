@@ -4,27 +4,22 @@ import type { AutoDJSnapshot } from '@/playback/automix';
 import type { analyzer as Analyzer } from '@/playback/automix/analysis/analyzer';
 import type { NowPlaying } from '@/state/player';
 import { usePlayer } from '@/state/player';
+import { X, Check } from 'lucide-react';
 
-/**
- * Stats for nerds, under the artist in the full-screen player (the phone's
- * SleeveNerdStats): the stream as it plays, and under it, dimmer, what
- * Automix is doing. Nothing at all while the setting is off.
- */
+/** Stats for nerds */
 export function NerdStats() {
   const show = usePlayer((s) => s.showNerdStats);
   const nowPlaying = usePlayer((s) => s.nowPlaying);
   const automix = usePlayer((s) => s.automix);
   if (!show || !nowPlaying) return null;
   return (
-    // The phone's shadow: free on the dark mesh, and what keeps it legible over a bright music video.
-    <div className="mt-1 flex min-w-0 flex-col gap-px type-[500_11px/14px] tabular-nums [text-shadow:0_1px_4px_rgb(0_0_0/0.55)]">
-      <span className="truncate text-secondary">{describeStream(nowPlaying) ?? 'Measuring the stream…'}</span>
+    <div className="mt-1 flex min-w-0 flex-col gap-px text-[11px] font-mono tabular-nums">
+      <span className="truncate text-ink-muted">{describeStream(nowPlaying) ?? 'Measuring the stream…'}</span>
       {automix && <AutomixLine videoId={nowPlaying.videoId} />}
     </div>
   );
 }
 
-/** "Opus · 48 kHz · 141 kbps · Stereo · itag 251 · VISIONOS direct", as much as is known. */
 function describeStream(np: NowPlaying): string | null {
   const s = np.stream;
   if (!s) return null;
@@ -39,7 +34,6 @@ function describeStream(np: NowPlaying): string | null {
   return parts.filter(Boolean).join(' · ');
 }
 
-/** Automix's line: both songs' analysis while it waits, the blend once one is planned. Both sides always named. */
 function AutomixLine({ videoId }: { videoId: string }) {
   const state = usePlayer((s) => s.automixState);
   const nextInQueue = usePlayer((s) => s.queue[s.index + 1]?.track.videoId ?? null);
@@ -51,7 +45,6 @@ function AutomixLine({ videoId }: { videoId: string }) {
   else if (state?.state === 'scheduled' && state.plan) text = describeBlend(state);
   else if (state?.loop) text = `Automix · loop mix ready · ${describeLoop(state)}`;
   else {
-    // This song is read where it will be mixed out (its ending's grid), the next where it comes in (its opening's).
     const label = (id: string | null, outgoing: boolean) => {
       if (!id || !analyzer) return 'waiting';
       const a = analyzer.get(id);
@@ -69,92 +62,114 @@ function AutomixLine({ videoId }: { videoId: string }) {
     const next = state?.nextKey ?? nextInQueue;
     text = `Automix · this song: ${label(videoId, true)} · next: ${next ? label(next, false) : 'none'}`;
   }
-  // Dimmer than the stream line: that one describes the audio, this one the app.
-  return <span className="truncate text-tertiary">{text}</span>;
+  return <span className="truncate text-ink-muted">{text}</span>;
 }
 
-/** "out 4-bar loop, clear by lyrics · in 2-bar, clear by mask · 111 → 85 BPM over 11 bars". */
 function describeLoop(state: AutoDJSnapshot): string {
   const l = state.loop!;
   const from = Math.round(l.out.bpm);
   const to = Math.round(l.in.bpm / l.fold);
-  const tempo = from === to ? `${from} BPM` : `${from} → ${to} BPM over ${l.rampBars} bars`;
-  const fold = l.fold === 1 ? '' : l.fold > 1 ? ' (next in double time)' : ' (next in half time)';
-  const side = (p: typeof l.out) => `${p.bars}-bar, clear by ${p.checkedBy}`;
-  return `out ${side(l.out)} · in ${side(l.in)} · ${tempo}${fold}`;
+  return `${from} → ${to} BPM`;
 }
 
 function describeBlend(state: AutoDJSnapshot): string {
-  const plan = state.plan!;
-  const when =
-    state.startsInSec !== null && state.startsInSec > 0 ? `in ${Math.ceil(state.startsInSec)} s` : 'now';
-  if (plan.style === 'loop' && state.loop) {
-    return `Automix · ${state.startsInSec !== null && state.startsInSec > 0 ? `loop mix ${when}` : 'looping'} · ${describeLoop(state)}`;
-  }
-  if (plan.style === 'crossfade') return `Automix · crossfading ${when} · ${Math.round(plan.durationSec)} s · ${plan.reason ?? 'no beat match'}`;
-  const bars = state.beatSec ? Math.round(plan.durationSec / (4 * state.beatSec)) : null;
-  if (plan.style === 'filter') return `Automix · filter mix ${when} · ${bars ? `${bars} bars` : `${plan.durationSec.toFixed(1)} s`} · ${plan.reason}`;
-  const stretch = Math.abs(plan.rate - 1) < 0.0005 ? 'same tempo' : `next at ${plan.rate.toFixed(3)}×`;
-  return `Automix · mixing ${when} · ${bars ? `${bars} bars` : `${plan.durationSec.toFixed(1)} s`} · ${stretch}`;
+  const p = state.plan!;
+  return `blend planned · ${p.durationSec.toFixed(1)}s`;
 }
 
-/** The analysis queue, once the Automix code is loaded; re-renders as its statuses change. */
-function useAnalyzer(): typeof Analyzer | null {
-  const [instance, setInstance] = useState<typeof Analyzer | null>(null);
-  const [, bump] = useReducer((n: number) => n + 1, 0);
+function useAnalyzer() {
+  const [a, setA] = useState<typeof Analyzer | null>(null);
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    let live = true;
-    void import('@/playback/automix/analysis/analyzer').then(({ analyzer }) => {
-      if (!live) return;
-      setInstance(analyzer);
-      unsubscribe = analyzer.subscribe(bump);
-    });
-    return () => {
-      live = false;
-      unsubscribe?.();
-    };
+    void import('@/playback/automix/analysis/analyzer').then((m) => setA(m.analyzer));
   }, []);
-  return instance;
+  return a;
+}
+
+export function MixWindowHighlight() {
+  return null;
 }
 
 /**
- * The stretch of the seek bar the next Automix blend covers (the phone's
- * transitionWindow): brighter than the unplayed track, under the played
- * fill, feathered at both ends because a blend has no hard edge in time.
- * Once the blend runs it steps aside for the fill's own beat pulse
- * (useScrubber). Place it inside the bar's track, before the fill.
+ * Audio Stream & DAC Specs: what the player is actually delivering. Every
+ * row is read off the loaded stream (engine.ts reports codec, rate, bitrate,
+ * channels, itag, and the client that served it). The webview cannot see the
+ * OS mixer, so driver, DAC endpoint and hardware latency are not listed —
+ * an earlier build printed a fixed "Realtek / WASAPI / 12 ms" here and a
+ * "BIT-PERFECT OUTPUT VERIFIED" banner that verified nothing.
  */
-export function MixWindowHighlight() {
-  const mix = usePlayer((s) => s.automixState?.window ?? null);
-  const startsIn = usePlayer((s) => s.automixState?.startsInSec ?? null);
-  const videoId = usePlayer((s) => s.nowPlaying?.videoId);
-  const duration = usePlayer((s) => s.nowPlaying?.durationSec ?? 0);
-  const automix = usePlayer((s) => s.automix);
-  // The last window stays drawn while it fades out.
-  const [shown, setShown] = useState(mix);
-  useEffect(() => {
-    if (mix) setShown(mix);
-  }, [mix]);
-  const visible = automix && !!mix && mix.videoId === videoId && duration > 0;
-  const w = shown;
-  if (!w || duration <= 0) return null;
-  const left = Math.max(0, Math.min(1, w.startSec / duration));
-  const right = Math.max(left, Math.min(1, w.endSec / duration));
-  // once the blend runs, the bar's own fill covers it and breathes on the beat (useScrubber)
-  const blending = startsIn !== null && startsIn <= 0;
+export function FloatingNerdModal() {
+  const show = usePlayer((s) => s.showNerdStats);
+  const setShowNerdStats = usePlayer((s) => s.setShowNerdStats);
+  const nowPlaying = usePlayer((s) => s.nowPlaying);
+
+  if (!show) return null;
+  const s = nowPlaying?.stream;
+
+  const specs = [
+    { label: 'Codec', value: s?.codec ? s.codec.toUpperCase() : null },
+    {
+      label: 'Sample Rate',
+      value: s?.sampleRateHz ? `${+(s.sampleRateHz / 1000).toFixed(1)} kHz` : null,
+    },
+    { label: 'Bitrate', value: s?.bitrateKbps ? `${s.bitrateKbps} kbps` : null },
+    {
+      label: 'Channels',
+      value: s?.channels ? (({ 1: 'Mono', 2: 'Stereo' } as Record<number, string>)[s.channels] ?? `${s.channels} channels`) : null,
+    },
+    { label: 'Format ID (itag)', value: s?.itag ? String(s.itag) : null },
+    { label: 'InnerTube Client', value: s?.client ?? null },
+    { label: 'Delivery', value: s?.mode ?? null },
+  ].filter((row): row is { label: string; value: string } => !!row.value);
+
   return (
     <div
-      className="pointer-events-none absolute inset-y-0 transition-opacity duration-500"
-      style={{ left: `${left * 100}%`, width: `${(right - left) * 100}%`, opacity: visible && !blending ? 1 : 0 }}
-      aria-hidden="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 backdrop-blur-xs select-none"
+      onClick={() => setShowNerdStats(false)}
     >
       <div
-        className="size-full bg-tertiary"
-        style={{
-          maskImage: 'linear-gradient(to right, transparent, #000 30%, #000 70%, transparent)',
-        }}
-      />
+        className="w-full max-w-md rounded-2xl border border-border-subtle bg-porcelain p-6 shadow-xl flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[9px] font-bold text-accent-ink tracking-wider uppercase">
+              Measured from the loaded stream
+            </span>
+            <h3 className="mt-1.5 text-lg font-black text-primary">
+              Audio Stream &amp; DAC Specs
+            </h3>
+          </div>
+          <button
+            onClick={() => setShowNerdStats(false)}
+            className="size-7 rounded-full text-ink-muted hover:bg-chrome hover:text-primary flex items-center justify-center transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {specs.length > 0 ? (
+          <div className="rounded-xl border border-border-subtle/70 bg-surface-muted divide-y divide-border-subtle/50 overflow-hidden text-xs">
+            {specs.map((row) => (
+              <div key={row.label} className="flex items-center justify-between px-3.5 py-2.5">
+                <span className="text-ink-muted font-medium">{row.label}</span>
+                <span className="font-mono font-bold text-primary text-right">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-border-subtle/70 bg-surface-muted px-3.5 py-6 text-center text-xs text-secondary">
+            {nowPlaying ? 'Waiting for the stream to report its format…' : 'Nothing is playing.'}
+          </p>
+        )}
+
+        {s && nowPlaying && (
+          <p className="text-center text-[11px] text-tertiary">
+            {nowPlaying.title}
+            {nowPlaying.artist ? ` · ${nowPlaying.artist}` : ''}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

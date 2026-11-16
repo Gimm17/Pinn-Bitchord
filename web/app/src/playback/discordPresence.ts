@@ -1,23 +1,77 @@
 import { useEffect } from 'react';
 import type { DiscordNowPlaying } from '@bitchord/shared/bridge';
 import { getBridge } from '@/extension/bridge';
-import { useDiscord, useDiscordOptions } from '@/extension/useDiscord';
+import { useDiscordOptions } from '@/extension/useDiscord';
 import { sizedArtwork } from '@/lib/artwork';
 import { getAudio, usePlayer } from '@/state/player';
+import { discordGatewayManager } from './discordGateway';
 
-/**
- * Tells the extension what's playing, for the Discord card (prompt §7.2).
- * The same moments PlaybackService pushes on:
- * - a track change, or playback resuming: a new presence;
- * - a seek: new timestamps, since Discord draws the bar from them itself;
- * - a pause: the card comes down, or Discord would count on through a stopped song;
- * - a change to the card's options.
- * A buffering stall and the gap while the next track loads are not pauses.
- * Nothing in between: the countdown is Discord's own arithmetic.
- */
-
-/** Discord draws the sleeve at about 96 dp; 480 px covers it on any density (DiscordRPC.ART_PX). */
+/** Discord draws the sleeve at about 96 dp; 480 px covers it on any density. */
 const ART_PX = 480;
+
+export function sendDesktopPresence(track: DiscordNowPlaying | null) {
+  try {
+    const w = typeof window !== 'undefined' ? (window as any) : null;
+    if (!w) return;
+    const invoke = w.__TAURI__?.core?.invoke || w.__TAURI_INTERNALS__?.invoke;
+    if (invoke) {
+      console.log('[Discord RPC] Directly invoking bridge_discord_presence:', track);
+      const payload = track
+        ? {
+            title: track.title,
+            artist: track.artist,
+            album: track.album ?? null,
+            quality: track.quality ?? null,
+            artworkUrl: track.artworkUrl ?? null,
+            videoId: track.videoId ?? null,
+            positionMs: track.positionMs ?? null,
+            durationMs: track.durationMs ?? null,
+          }
+        : null;
+      invoke('bridge_discord_presence', { payload })
+        .then(() => console.log('[Discord RPC] Presence update ACKed'))
+        .catch((e: any) => console.error('[Discord RPC] Presence update error:', e));
+    }
+  } catch (e) {
+    console.error('[Discord RPC] Failed to send desktop presence:', e);
+  }
+}
+
+function cleanAudioQuality(): string {
+  const { nowPlaying: np } = usePlayer.getState();
+  if (!np) return 'FLAC · 44.1 kHz · 1411 kbps';
+
+  const s = np.stream;
+  if (!s) return 'FLAC · 44.1 kHz · 1411 kbps';
+
+  const parts: string[] = [];
+
+  // Codec: e.g. FLAC, Opus
+  const codec = (s.codec || 'FLAC').toUpperCase();
+  parts.push(codec);
+
+  // Sample Rate: e.g. 44.1 kHz
+  if (s.sampleRateHz) {
+    const khz = +(s.sampleRateHz / 1000).toFixed(1);
+    parts.push(`${khz} kHz`);
+  }
+
+  // Bit Depth if > 16 (e.g. 24-bit)
+  if ((s as any).bitDepth && (s as any).bitDepth > 16) {
+    parts.push(`${(s as any).bitDepth}-bit`);
+  }
+
+  // Bitrate: e.g. 1411 kbps
+  if (s.bitrateKbps) {
+    parts.push(`${s.bitrateKbps} kbps`);
+  } else if (s.sampleRateHz) {
+    const depth = (s as any).bitDepth || 16;
+    const kbps = Math.round((s.sampleRateHz * depth * 2) / 1000);
+    parts.push(`${kbps} kbps`);
+  }
+
+  return parts.join(' · ');
+}
 
 function nowPlaying(): DiscordNowPlaying | null {
   const { nowPlaying: np, queue, index } = usePlayer.getState();
@@ -33,46 +87,59 @@ function nowPlaying(): DiscordNowPlaying | null {
     positionMs: Math.round((audio?.currentTime ?? 0) * 1000),
     durationMs: Math.round(durationSec * 1000),
     playbackRate: audio?.playbackRate || 1,
+    quality: cleanAudioQuality(),
   };
 }
 
 export function startPublisher(): () => void {
-  /** What was last sent: a track (and the moment it was pushed for), or a clear. */
   let sent: string | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  /** A push asked to be fresh (a seek, a resume) and not yet sent: a seek buffers before it plays again. */
-  let forced = false;
 
   const publish = () => {
     const { status } = usePlayer.getState();
     const options = useDiscordOptions.getState().options;
     const bridge = getBridge();
-    if (!bridge) return;
+
+    console.log('[Discord RPC] publish() running with status =', status);
+
     if (status === 'paused' || status === 'idle' || status === 'error') {
       if (sent === 'clear') return;
       sent = 'clear';
-      void bridge.call('discord.presence', { track: null, options }).catch(() => (sent = null));
+      console.log('[Discord RPC] Clearing presence...');
+      sendDesktopPresence(null);
+      discordGatewayManager.updateActivity(null, options);
+      if (bridge) {
+        void bridge.call('discord.presence', { track: null, options }).catch(() => (sent = null));
+      }
       return;
     }
+
     if (status !== 'playing') return; // loading or buffering: wait for the music
+
     const track = nowPlaying();
     if (!track) return;
-    const key = `${track.videoId}|${JSON.stringify(options)}`;
-    if (!forced && sent === key) return;
-    forced = false;
+
+    const key = `${track.videoId}|${track.title}|${JSON.stringify(options)}`;
     sent = key;
-    void bridge.call('discord.presence', { track, options }, { timeoutMs: 30_000 }).catch(() => (sent = null));
+
+    console.log('[Discord RPC] Publishing track presence:', track.title, 'by', track.artist);
+    sendDesktopPresence(track);
+    discordGatewayManager.updateActivity(track, options);
+    if (bridge) {
+      void bridge.call('discord.presence', { track, options }, { timeoutMs: 30_000 }).catch((err) => {
+        console.error('[Discord RPC] bridge.call failed:', err);
+        sent = null;
+      });
+    }
   };
-  // Status flips in bursts (loading → buffering → playing); answer the last one,
-  // keeping any forced push from earlier in the burst.
-  const soon = (force = false) => {
-    if (force) forced = true;
+
+  const soon = () => {
     clearTimeout(timer);
-    timer = setTimeout(publish, 400);
+    timer = setTimeout(publish, 300);
   };
 
   let audio: HTMLMediaElement | null = null;
-  const onSeeked = () => soon(true);
+  const onSeeked = () => soon();
   const bindAudio = () => {
     audio?.removeEventListener('seeked', onSeeked);
     audio = getAudio();
@@ -81,15 +148,18 @@ export function startPublisher(): () => void {
   bindAudio();
 
   const offPlayer = usePlayer.subscribe((state, before) => {
-    // The decks are made on the first play, and a crossfade swaps them: follow the element, not the counter.
     if (getAudio() !== audio) bindAudio();
-    if (state.nowPlaying?.videoId !== before.nowPlaying?.videoId || state.status !== before.status) {
-      // Resuming after a pause is a fresh push: the old timestamps are stale.
-      soon(before.status === 'paused' && state.status === 'playing');
+    if (
+      state.nowPlaying?.videoId !== before.nowPlaying?.videoId ||
+      state.nowPlaying?.title !== before.nowPlaying?.title ||
+      state.status !== before.status
+    ) {
+      soon();
     }
   });
+
   const offOptions = useDiscordOptions.subscribe(() => soon());
-  soon(true);
+  soon();
 
   return () => {
     clearTimeout(timer);
@@ -101,7 +171,7 @@ export function startPublisher(): () => void {
 
 /** Mounted once in the shell: publishes while an account is connected and presence is on. */
 export function useDiscordPresence(): void {
-  const status = useDiscord();
-  const active = status.state === 'ready' && status.discord.available && status.discord.connected && status.discord.enabled;
-  useEffect(() => (active ? startPublisher() : undefined), [active]);
+  useEffect(() => {
+    return startPublisher();
+  }, []);
 }

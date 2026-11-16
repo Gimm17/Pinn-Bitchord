@@ -30,6 +30,9 @@ export function VideoQuality({ className = '' }: { className?: string }) {
 
   return (
     <>
+      {/* Glass over the full-screen video, not over a theme surface: the white
+          washes and label stay white in both schemes because the backdrop is
+          always dark footage. */}
       <button
         className={`grid h-7 min-w-11 place-items-center overflow-hidden rounded-[8px] bg-white/10 px-2 [backdrop-filter:saturate(1.8)_blur(18px)] [interpolate-size:allow-keywords] [transition:width_0.3s_ease,background-color_0.1s_ease-in,opacity_0.3s_ease] hover:bg-white/20 ${className}`}
         aria-haspopup="menu"

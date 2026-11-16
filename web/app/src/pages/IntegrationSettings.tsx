@@ -4,14 +4,7 @@ import { useAppleSettings } from '@/data/apple/motionArt';
 import { useHostAccess } from '@/extension/useHostAccess';
 import { LYRIC_EXTENSION_ORIGINS } from '@/lyrics/http';
 import { useSpotifySettings } from '@/data/spotify/canvas';
-import {
-  useDiscord,
-  useDiscordConnect,
-  useDiscordDisconnect,
-  useDiscordEnabled,
-  useDiscordOptions,
-  type DiscordStatus,
-} from '@/extension/useDiscord';
+import { useDiscord, useDiscordEnabled, useDiscordOptions } from '@/extension/useDiscord';
 import {
   openSpotifySignIn,
   useRefreshSpotifyAuth,
@@ -106,39 +99,6 @@ function spotifyText(auth: SpotifyAuthStatus): string {
   return signedIn ? `Signed in as ${user?.name ?? 'your account'}` : 'Couldn’t read your account';
 }
 
-export function DiscordIntegration() {
-  const status = useDiscord();
-  const connect = useDiscordConnect();
-  const disconnect = useDiscordDisconnect();
-  const text = discordText(status);
-  if (status.state !== 'ready' || !status.discord.available) return <span className={settingsUi.value}>{text}</span>;
-  const connected = status.discord.connected;
-  return (
-    <span className={settingsUi.value}>
-      <span title={status.discord.problem ?? undefined}>{text}</span>
-      <button
-        className={settingsUi.inlineButton}
-        onClick={() => (connected ? disconnect.mutate() : connect.mutate())}
-        disabled={connect.isPending || disconnect.isPending}
-      >
-        {connected ? 'Disconnect' : 'Connect'}
-      </button>
-    </span>
-  );
-}
-
-function discordText(status: DiscordStatus): string {
-  if (status.state === 'checking') return 'Checking…';
-  if (status.state === 'unavailable') return 'Not in this build of the extension';
-  const { available, connected, enabled, user, gateway, problem } = status.discord;
-  if (!available) return 'Not in this build of the extension';
-  if (!connected || !user) return 'Not connected';
-  if (!enabled) return `${user.name} · presence off`;
-  if (gateway === 'error') return problem ?? 'Couldn’t connect';
-  if (gateway === 'ready') return `${user.name} · showing what you play`;
-  if (gateway === 'connecting') return `${user.name} · connecting…`;
-  return `${user.name} · on`;
-}
 
 export function Toggle({ label, detail, checked, onChange }: { label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
   return (
@@ -210,7 +170,7 @@ export function DiscordSettings() {
               <input
                 className={settingsUi.input}
                 placeholder="BitChord"
-                value={options.activityName}
+                value={!options.activityName || options.activityName.toLowerCase() === 'chamomile' ? 'BitChord' : options.activityName}
                 onChange={(e) => set({ activityName: e.currentTarget.value })}
               />
             </label>
@@ -252,8 +212,7 @@ export function DiscordSettings() {
         )}
       </section>
       <p className={settingsUi.footer}>
-        This uses your Discord account’s own token, which Discord’s terms don’t allow. Button text can use {'{song_name}'},{' '}
-        {'{artist_name}'} and {'{album_name}'}.
+        Button text can use {'{song_name}'}, {'{artist_name}'} and {'{album_name}'}.
       </p>
     </>
   );

@@ -73,7 +73,7 @@ function useLyricFont(): boolean {
  */
 const FAR_LINES =
   '.lyrics-line:not(.active):not(.pre-active):not(.lyrics-activest):not(.post-active-line):not(.next-active-line)' +
-  ':not(.prev-2):not(.prev-3):not(.next-2):not(.next-3):not(.lyrics-gap) { opacity: 0.46; }';
+  ':not(.prev-2):not(.prev-3):not(.next-2):not(.next-3):not(.lyrics-gap) { opacity: 0.50; }';
 
 /**
  * The full-screen player's sizing (report §7): its line size, set on the host
@@ -85,6 +85,82 @@ const FULL_SIZE =
   ':host([data-full]) .lyrics-container { --lyplus-font-size-base: var(--bitchord-lyric-size, 34px);' +
   ' --am-lyrics-line-height: 1.2; --am-lyrics-line-spacing: calc(var(--bitchord-lyric-size, 34px) * 0.7);' +
   ' --lyrics-scroll-padding-top: 30%; --am-lyrics-inline-padding: 0px; }';
+
+/**
+ * Light ceramic theme overrides for the side panel lyrics inspector (:not([data-full])).
+ * Fixes washed-out / low-contrast lyrics text against the light ceramic surface:
+ * - Active lines & syllables: Deep Slate Navy (#132230) with bold weight and full opacity
+ * - Inactive lines: Slate Gray (#536B82) with clear readability
+ * - Character karaoke wipes: Linear gradient with Deep Slate Navy (#132230)
+ * - Gap indicator dots: Dark Sage Teal (#2D6A5D)
+ * - Translation and romanized lines: Readable Slate Gray (#536B82)
+ */
+const LIGHT_THEME_RULES =
+  ':host(:not([data-full])) {' +
+  '  --am-lyrics-highlight-color: #132230 !important;' +
+  '  --highlight-color: #132230 !important;' +
+  '  --lyplus-lyrics-palette: #132230 !important;' +
+  '  --lyplus-text-primary: #132230 !important;' +
+  '  --lyplus-text-secondary: #536B82 !important;' +
+  '  --word-inactive-color: #536B82 !important;' +
+  '  --word-wipe-color: #132230 !important;' +
+  '  --am-lyrics-highlight-surface: rgba(19, 34, 48, 0.05) !important;' +
+  '  color: #132230 !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-container {' +
+  '  color: #132230 !important;' +
+  '  padding-inline: 20px !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line {' +
+  '  color: #536B82 !important;' +
+  '  opacity: 0.65;' +
+  '  font-weight: 500;' +
+  '  transition: opacity 0.3s ease, color 0.3s ease, transform 0.4s cubic-bezier(0.2, 0, 0, 1) !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line:not(.active):not(.pre-active) {' +
+  '  color: #536B82 !important;' +
+  '  opacity: 0.60;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line:not(.active):not(.pre-active):hover {' +
+  '  opacity: 0.90 !important;' +
+  '  color: #132230 !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line:is(.active, .pre-active, .lyrics-activest) {' +
+  '  opacity: 1 !important;' +
+  '  color: #132230 !important;' +
+  '  font-weight: 700;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line:is(.active, .pre-active, .lyrics-activest) .lyrics-line-container {' +
+  '  color: #132230 !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line:is(.active, .pre-active, .lyrics-activest) .lyrics-syllable {' +
+  '  color: #132230 !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line.active:not(.lyrics-gap) .lyrics-syllable.highlight.no-chars,' +
+  ':host(:not([data-full])) .lyrics-line.active:not(.lyrics-gap) .lyrics-syllable.pre-highlight.no-chars {' +
+  '  background-image: linear-gradient(90deg, #132230 0%, #132230 calc(100% - var(--wipe-gradient-width, 0.75em)), transparent 100%) !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line.active .lyrics-syllable span.char {' +
+  '  background-image: linear-gradient(90deg, #132230 0%, #132230 calc(100% - var(--wipe-gradient-width, 0.75em)), transparent 100%) !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-line.active .lyrics-syllable span.char.highlight {' +
+  '  background-image: linear-gradient(-90deg, #132230 0%, #132230 calc(100% - var(--wipe-gradient-width, 0.75em)), transparent 100%) !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-syllable.line-synced {' +
+  '  color: #536B82 !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-gap .lyrics-syllable {' +
+  '  background-color: #2D6A5D !important;' +
+  '}' +
+  ':host(:not([data-full])) .lyrics-romanization-container,' +
+  ':host(:not([data-full])) .lyrics-translation-container,' +
+  ':host(:not([data-full])) .romanized-line {' +
+  '  color: #536B82 !important;' +
+  '  opacity: 0.8 !important;' +
+  '}' +
+  ':host(:not([data-full])) .no-lyrics {' +
+  '  color: #536B82 !important;' +
+  '}';
 
 /**
  * am-lyrics, exactly as it is, fed our TTML and a steered clock (prompt §10.2).
@@ -109,9 +185,11 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
     el.ttml = ttml;
     el.interpolate = true;
     el.autoScroll = true;
-    el.highlightColor = '#ffffff';
+    el.highlightColor = full ? '#ffffff' : '#132230';
     el.fontFamily = LYRIC_FONT;
-    el.className = 'block min-h-0 flex-1 overflow-hidden [--am-lyrics-highlight-color:#fff]';
+    el.className = full
+      ? 'block min-h-0 flex-1 overflow-hidden [--am-lyrics-highlight-color:#fff] text-white'
+      : 'block min-h-0 flex-1 overflow-hidden [--am-lyrics-highlight-color:#132230] text-[#132230]';
     el.toggleAttribute('data-full', full);
     const onLineClick = (event: Event) => {
       const timestamp = (event as CustomEvent<{ timestamp: number }>).detail?.timestamp;
@@ -125,7 +203,7 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
       const root = el.shadowRoot;
       if (!root) return;
       const sheet = new CSSStyleSheet();
-      sheet.replaceSync(HIDE_FOOTER + FAR_LINES + FULL_SIZE);
+      sheet.replaceSync(HIDE_FOOTER + FAR_LINES + FULL_SIZE + LIGHT_THEME_RULES);
       root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
       // The full-screen column fades its top edge, but am-lyrics' toolbar
       // (romanize, translate, download) sits at the top of the same scroller
@@ -253,23 +331,24 @@ function ProviderPicker({ current, full }: { current: LyricsSourceId | null; ful
       className={
         full
           ? 'flex items-center justify-between pb-1 opacity-0 transition-opacity duration-200 group-hover/panel:opacity-100 focus-within:opacity-100'
-          : 'flex items-center justify-between px-4 pt-4 pb-1'
+          : 'flex items-center justify-between px-5 pt-3 pb-2 border-b border-border-subtle/50 mb-2'
       }
     >
       <button
-        className="inline-flex items-center gap-1 rounded-[8px] px-2 py-1 type-callout-emphasized text-secondary hover:bg-quinary"
+        className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-porcelain/90 px-3 py-1 type-callout-emphasized text-primary shadow-2xs hover:bg-chrome transition-colors cursor-pointer"
         aria-haspopup="menu"
         onClick={(e) => setAnchor(e.currentTarget)}
       >
-        <span>{label}</span>
-        <ChevronDown size={14} />
+        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="font-semibold text-xs text-[#132230]">{label}</span>
+        <ChevronDown size={13} className="text-[#536B82]" />
       </button>
       <button
-        className="grid size-7 place-items-center rounded-[8px] text-secondary hover:bg-quinary"
+        className="grid size-7 place-items-center rounded-full border border-border-subtle bg-porcelain/90 text-[#536B82] hover:text-[#132230] hover:bg-chrome transition-colors shadow-2xs cursor-pointer"
         aria-label="Lyric settings"
         onClick={() => setSettings(true)}
       >
-        <Settings2 size={16} />
+        <Settings2 size={14} />
       </button>
       {anchor && (
         <Menu anchor={anchor} placement="below-end" onClose={close} label="Lyrics provider">
@@ -317,7 +396,7 @@ function PermissionNotice({ origins }: { origins: string[] }) {
         {names.length > 2 ? ` and ${names.length - 2} more` : ''} need the extension’s permission.
       </span>
       <button
-        className="flex-none type-callout-emphasized text-key"
+        className="flex-none type-callout-emphasized text-accent-ink"
         // The notice stays until the extension confirms the grant (checked when this tab comes back).
         onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins })}
       >
@@ -389,8 +468,8 @@ export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' 
   const full = variant === 'full';
   const empty = full
     ? 'flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center type-title-3 text-secondary'
-    : 'flex flex-1 flex-col items-center justify-center gap-2 px-6 pb-20 text-center type-[400_12px/16px] text-secondary';
-  const emptyTitle = full ? 'type-title-1-emphasized text-primary' : 'type-[600_12px/16px]';
+    : 'flex flex-1 flex-col items-center justify-center gap-2 px-6 pb-20 text-center type-[400_12px/16px] text-[#536B82]';
+  const emptyTitle = full ? 'type-title-1-emphasized text-primary' : 'type-[600_13px/18px] text-[#132230] font-bold';
 
   return (
     <div className={full ? `${panel} ${fullSizes}` : panel}>

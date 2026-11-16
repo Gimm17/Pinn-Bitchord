@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { config } from '@/config';
-import { useExtension } from './useExtension';
+import { isTauriDesktop, useExtension } from './useExtension';
 
 /** Where a published zip is served: the site's downloads folder, its name escaped (it has spaces and brackets). */
 export function downloadUrl(name: string): string {
@@ -31,6 +31,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 async function fetchPublished(): Promise<PublishedExtension | null> {
+  if (isTauriDesktop()) return null;
   const response = await fetch(config.extensionManifestUrl, { cache: 'no-store' });
   if (!response.ok) return null;
   const body = (await response.json()) as Partial<PublishedExtension>;
@@ -58,6 +59,12 @@ export function usePublishedExtension(): PublishedExtension | null {
 }
 
 export function useExtensionUpdate(): ExtensionUpdate {
+  if (isTauriDesktop()) {
+    return {
+      state: 'current',
+      latest: { version: '1.9.0', builtAt: '', files: { chrome: '', firefox: '' } },
+    };
+  }
   const extension = useExtension();
   const latest = usePublishedExtension();
   if (!latest || extension.state !== 'present') return { state: 'unknown' };

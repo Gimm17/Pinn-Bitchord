@@ -83,7 +83,7 @@ export default function DebugPage() {
             placeholder="Video id or YouTube link"
             aria-label="Video id or YouTube link"
           />
-          <button className="h-9 rounded-pill bg-key-bg px-[18px] type-title-3-emphasized text-white disabled:opacity-40" type="submit" disabled={!id}>
+          <button className="h-9 rounded-pill bg-key-bg px-[18px] type-title-3-emphasized text-on-accent disabled:opacity-40" type="submit" disabled={!id}>
             Play
           </button>
         </form>
@@ -94,7 +94,7 @@ export default function DebugPage() {
           {TEST_TRACKS.map((t) => (
             <li key={t.id}>
               <button
-                className="flex w-full justify-between gap-3 rounded-row px-2.5 py-[7px] text-left type-body hover:bg-tracklist-hover data-[current=true]:text-key"
+                className="flex w-full justify-between gap-3 rounded-row px-2.5 py-[7px] text-left type-body hover:bg-tracklist-hover data-[current=true]:text-accent-ink"
                 data-current={nowPlaying?.videoId === t.id}
                 onClick={() => void playVideo(t.id)}
               >
@@ -107,7 +107,7 @@ export default function DebugPage() {
 
         <div className="flex items-baseline justify-between">
           <h2 className={sectionHeader}>Track log</h2>
-          <div className="flex gap-4 type-body text-key">
+          <div className="flex gap-4 type-body text-accent-ink">
             <button onClick={() => setFilter(filter === 'all' ? 'current' : 'all')}>
               {filter === 'all' ? 'Show current track' : 'Show everything'}
             </button>
@@ -121,7 +121,7 @@ export default function DebugPage() {
           {shown.map((line) => (
             <li
               key={line.id}
-              className="flex gap-2.5 data-[level=debug]:text-secondary data-[level=error]:text-red data-[level=warn]:text-[#d29a00]"
+              className="flex gap-2.5 data-[level=debug]:text-secondary data-[level=error]:text-red data-[level=warn]:text-warning"
               data-level={line.level}
             >
               <span className="min-w-14 shrink-0 text-right text-tertiary">{(line.t / 1000).toFixed(2)}</span>

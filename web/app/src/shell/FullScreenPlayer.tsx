@@ -1,5 +1,5 @@
 import { Maximize, Minimize, X } from 'lucide-react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
 import {
   BackwardIcon,
@@ -21,6 +21,7 @@ import { MotionArtwork } from '@/components/music/MotionArtwork';
 import { VideoSurface } from '@/components/music/VideoSurface';
 import { useTrackMotion } from '@/data/apple/motionArt';
 import { sizedArtwork } from '@/lib/artwork';
+import { setWindowFullscreen } from '@/lib/nativeFullscreen';
 import { usePlayer } from '@/state/player';
 import { useUi } from '@/state/ui';
 import { useHasVideo, useVideo } from '@/state/video';
@@ -30,18 +31,28 @@ import { MeshBackdrop } from './MeshBackdrop';
 import { albumPageFor } from './nowPlayingLinks';
 import { UpNext } from './UpNext';
 import { MixWindowHighlight, NerdStats } from './NerdStats';
+import { StreamQuality } from './StreamQuality';
 import { useScrubber } from './useScrubber';
 import { VideoQuality } from './VideoQuality';
 import { fadeForVolume, VolumeControl } from './VolumeControl';
 
-function useBrowserFullScreen(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      document.addEventListener('fullscreenchange', onChange);
-      return () => document.removeEventListener('fullscreenchange', onChange);
-    },
-    () => document.fullscreenElement !== null,
-  );
+/**
+ * The window goes full screen with the player and comes back when it closes:
+ * the point of the mode is that no title bar is left over the artwork.
+ */
+function useWindowFullScreen(): [boolean, () => void] {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    setOn(true);
+    void setWindowFullscreen(true);
+    return () => void setWindowFullscreen(false);
+  }, []);
+  const toggle = () =>
+    setOn((was) => {
+      void setWindowFullscreen(!was);
+      return !was;
+    });
+  return [on, toggle];
 }
 
 /** The seek line under the track's names: thicker on hover, with the times beneath its ends. */
@@ -158,10 +169,8 @@ export function FullScreenPlayer() {
   const [idle, setIdle] = useState(false);
   const [volumeOpen, setVolumeOpen] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const browserFullScreen = useBrowserFullScreen();
+  const [windowFullScreen, toggleWindowFullScreen] = useWindowFullScreen();
   const close = useRef<HTMLButtonElement>(null);
-  // Whether this player put the page in the browser's full screen, so closing it leaves it again.
-  const enteredBrowserFullScreen = useRef(false);
 
   // The column follows the toggle alone: whether this track has lyrics, and
   // from which provider, is the panel's own business to say.
@@ -192,7 +201,6 @@ export function FullScreenPlayer() {
     const opener = document.activeElement as HTMLElement | null;
     close.current?.focus({ preventScroll: true });
     return () => {
-      if (enteredBrowserFullScreen.current && document.fullscreenElement) void document.exitFullscreen();
       opener?.focus({ preventScroll: true });
     };
   }, []);
@@ -206,18 +214,6 @@ export function FullScreenPlayer() {
   useEffect(() => {
     if (!nowPlaying) setFullScreen(false);
   }, [nowPlaying, setFullScreen]);
-
-  const toggleBrowserFullScreen = () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      // The whole page, not this overlay: menus and dialogs portal to <body> and must stay visible.
-      void document.documentElement.requestFullscreen().then(
-        () => (enteredBrowserFullScreen.current = true),
-        () => undefined,
-      );
-    }
-  };
 
   if (!nowPlaying) return null;
   const { videoId, title, artist } = nowPlaying;
@@ -257,17 +253,15 @@ export function FullScreenPlayer() {
       </button>
       {/* The music video's quality, just inside the full-screen button. */}
       {video && (
-        <VideoQuality className={`absolute top-[18px] z-1${hidden}${document.fullscreenEnabled ? ' right-15' : ' right-5'}`} />
+        <VideoQuality className={`absolute top-[18px] z-1 right-15${hidden}`} />
       )}
-      {document.fullscreenEnabled && (
-        <button
-          className={`${corner} top-4 right-5`}
-          aria-label={browserFullScreen ? 'Exit full screen' : 'Enter full screen'}
-          onClick={toggleBrowserFullScreen}
-        >
-          {browserFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
-        </button>
-      )}
+      <button
+        className={`${corner} top-4 right-5`}
+        aria-label={windowFullScreen ? 'Exit full screen' : 'Enter full screen'}
+        onClick={toggleWindowFullScreen}
+      >
+        {windowFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+      </button>
 
       {/* Apple's grid areas "controls lyrics": the artwork column, then the lyrics. */}
       <div
@@ -341,6 +335,8 @@ export function FullScreenPlayer() {
                   {title}
                 </PageLink>
                 {track?.explicit && <ExplicitBadge size={14} />}
+                {/* Codec and rate of the stream the engine actually loaded. */}
+                <StreamQuality className="ml-2 rounded-[4px] bg-quinary px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-secondary uppercase" />
               </div>
               <span className="truncate type-title-3 text-secondary">
                 {artist && <Credits videoId={videoId} line={artist} artists={track?.artists ?? []} className={pageLink} />}

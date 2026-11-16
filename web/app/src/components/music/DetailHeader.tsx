@@ -1,4 +1,4 @@
-import { Check, Plus, Shuffle } from 'lucide-react';
+import { Check, Plus, Radio, Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PlayIcon } from '@/components/icons/Transport';
@@ -14,56 +14,52 @@ interface DetailHeaderProps {
   info: HeaderInfo;
   onPlay: () => void;
   onShuffle: () => void;
+  onRadio?: () => void;
   canPlay: boolean;
-  /** More actions after the library toggle (a Spotify playlist's Import). */
   extra?: React.ReactNode;
-  /** Apple's motion artwork for an album, over the cover once it plays. */
   motion?: AppleMotion | null;
 }
 
-/** Shuffle (circle) · Play (pill), report §14; also the Spotify playlist's Import button. */
 export const detailButton = {
-  pill: 'inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-[24px] bg-pill-bg px-3 type-title-3-emphasized text-pill disabled:opacity-40 enabled:hover:opacity-90',
+  pill: 'inline-flex h-9 min-w-[120px] items-center justify-center gap-2 rounded-full bg-key px-5 text-xs font-bold text-on-accent shadow-[0_4px_12px_rgba(19,34,48,0.15)] transition-all hover:bg-key-rollover hover:scale-102 active:scale-98 cursor-pointer disabled:opacity-40',
   circle:
-    'grid size-9 place-items-center rounded-full border-[0.75px] border-quaternary bg-quinary text-primary disabled:opacity-40 enabled:hover:bg-quaternary',
+    'grid size-9 place-items-center rounded-full border border-border-subtle bg-porcelain text-primary shadow-2xs transition-all hover:border-accent hover:bg-accent-soft hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-40',
 };
 
-/**
- * Album and playlist header (report §3, §14): artwork with its glow, title,
- * artist, metadata, a three-line description, then Shuffle · Play.
- */
-export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }: DetailHeaderProps) {
+export function DetailHeader({ info, onPlay, onShuffle, onRadio, canPlay, extra, motion }: DetailHeaderProps) {
   const [expanded, setExpanded] = useState(false);
   const signedIn = useSignedIn();
   const setSaved = useSetListSaved();
   const library = signedIn ? info.library : null;
+
   return (
-    // Artwork beside the headings, description and actions; stacked and centred below 768px.
-    <div className="mx-(--body-gutter) mb-10 grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] gap-x-[34px] pt-11 [grid-template-areas:'artwork_headings'_'artwork_description'_'artwork_actions'] max-md:grid-cols-[1fr] max-md:grid-rows-[auto] max-md:justify-items-center max-md:pt-4 max-md:text-center max-md:[grid-template-areas:'artwork'_'headings'_'actions'_'description']">
-      <div className="relative w-[270px] self-start rounded-artwork-lg shadow-[0_10px_20px_0_var(--radiosityShadowColor)] [grid-area:artwork] max-lg:w-[220px] max-md:w-[min(270px,70vw)]">
+    <div className="mx-(--body-gutter) mb-6 flex items-start gap-8 pt-8 max-md:flex-col max-md:items-center max-md:text-center">
+      {/* Cover Artwork with Soft Drop Shadow */}
+      <div className="relative size-[220px] shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-porcelain shadow-md max-lg:size-[180px] max-md:size-[200px]">
         {info.thumbnail && (
-          // A blurred copy behind the artwork: Apple's radiosity glow.
-          <div className="absolute inset-0 -z-1 scale-88 opacity-30 blur-[20px] saturate-200" aria-hidden="true">
-            <Artwork src={info.thumbnail} displayWidth={80} radius="var(--radius-artwork-large)" />
+          <div className="absolute inset-0 -z-1 scale-90 opacity-20 blur-xl saturate-150" aria-hidden="true">
+            <Artwork src={info.thumbnail} displayWidth={80} radius="16px" />
           </div>
         )}
-        <Artwork src={info.thumbnail} displayWidth={270} radius="var(--radius-artwork-large)" eager />
-        {/* Apple's motion artwork, over the cover once it's playing. */}
+        <Artwork src={info.thumbnail} displayWidth={220} radius="16px" eager />
         {motion && (
           <MotionArtwork
             key={motion.url}
             motion={motion}
-            className="absolute inset-0 size-full rounded-artwork-lg object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
+            className="absolute inset-0 size-full rounded-2xl object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
           />
         )}
       </div>
-      <div className="flex flex-col pt-[37px] [grid-area:headings] max-md:items-center max-md:pt-5">
-        <h1 className="flex items-center type-large-title-emphasized leading-[30px] max-md:justify-center">
+
+      {/* Header Info */}
+      <div className="flex flex-1 flex-col justify-end pt-2 min-w-0">
+        <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-primary flex items-center gap-2 max-md:justify-center">
           {info.title}
           {info.explicit && <ExplicitBadge size={16} />}
         </h1>
+
         {info.artists.length > 0 && (
-          <div className="type-large-title leading-[30px] text-primary">
+          <div className="mt-1 text-base font-semibold text-accent-ink">
             {info.artists.map((artist, i) => {
               const href = artistHref(artist.id);
               return (
@@ -81,41 +77,49 @@ export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }
             })}
           </div>
         )}
-        <div className="mt-1 type-callout-emphasized text-secondary">{[info.subtitle, info.meta].filter(Boolean).join(' · ')}</div>
-      </div>
-      {info.description && (
-        <div className="mt-[38px] flex max-w-[440px] items-end type-body-tall text-secondary [grid-area:description] max-md:mt-5">
-          <p className={expanded ? 'min-w-0' : 'min-w-0 line-clamp-3'}>
-            {info.description}
-          </p>
-          {!expanded && info.description.length > 180 && (
-            <button className="shrink-0 ps-[5px] type-subhead-emphasized text-primary" onClick={() => setExpanded(true)}>
-              MORE
+
+        <div className="mt-1.5 text-[13px] text-secondary font-medium">
+          {[info.subtitle, info.meta].filter(Boolean).join(' • ')}
+        </div>
+
+        {info.description && (
+          <div className="mt-3 max-w-[500px] text-xs text-secondary line-clamp-2">
+            <p className={expanded ? 'min-w-0' : 'min-w-0 line-clamp-2'}>{info.description}</p>
+          </div>
+        )}
+
+        {/* Action Buttons Row */}
+        <div className="mt-5 flex items-center gap-3 max-md:justify-center">
+          <button className={detailButton.circle} aria-label="Shuffle" onClick={onShuffle} disabled={!canPlay} title="Shuffle">
+            <Shuffle size={16} strokeWidth={2.2} />
+          </button>
+
+          <button className={detailButton.pill} onClick={onPlay} disabled={!canPlay}>
+            <PlayIcon size={16} className="text-on-accent fill-on-accent" />
+            <span>Play</span>
+          </button>
+
+          {onRadio && (
+            <button className={detailButton.circle} aria-label="Start Radio" onClick={onRadio} disabled={!canPlay} title="Start Radio">
+              <Radio size={16} strokeWidth={2.2} />
             </button>
           )}
+
+          {library && (
+            <button
+              className={detailButton.circle}
+              aria-label={library.saved ? 'Remove from Library' : 'Add to Library'}
+              aria-pressed={library.saved}
+              title={library.saved ? 'In your library' : 'Add to Library'}
+              disabled={setSaved.isPending}
+              onClick={() => setSaved.mutate({ playlistId: library.playlistId, saved: !library.saved })}
+            >
+              {library.saved ? <Check size={16} strokeWidth={2.4} /> : <Plus size={16} strokeWidth={2.4} />}
+            </button>
+          )}
+
+          {extra}
         </div>
-      )}
-      <div className="mt-3.5 flex items-center gap-3.5 self-end [grid-area:actions]">
-        <button className={detailButton.circle} aria-label="Shuffle" onClick={onShuffle} disabled={!canPlay}>
-          <Shuffle size={18} strokeWidth={2.2} />
-        </button>
-        <button className={detailButton.pill} onClick={onPlay} disabled={!canPlay}>
-          <PlayIcon size={18} />
-          <span>Play</span>
-        </button>
-        {library && (
-          <button
-            className={detailButton.circle}
-            aria-label={library.saved ? 'Remove from Library' : 'Add to Library'}
-            aria-pressed={library.saved}
-            title={library.saved ? 'In your library' : 'Add to Library'}
-            disabled={setSaved.isPending}
-            onClick={() => setSaved.mutate({ playlistId: library.playlistId, saved: !library.saved })}
-          >
-            {library.saved ? <Check size={18} strokeWidth={2.4} /> : <Plus size={18} strokeWidth={2.4} />}
-          </button>
-        )}
-        {extra}
       </div>
     </div>
   );

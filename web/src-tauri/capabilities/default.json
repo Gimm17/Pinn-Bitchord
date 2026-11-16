@@ -1,0 +1,23 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-fullscreen",
+    "default",
+    "allow-bridge-ping",
+    "allow-bridge-http",
+    "allow-bridge-auth-state",
+    "allow-bridge-discord-presence",
+    "allow-bridge-discord-status",
+    "allow-bridge-discord-set-enabled",
+    "allow-bridge-party-connect",
+    "allow-bridge-party-send",
+    "allow-bridge-party-close",
+    "allow-bridge-party-http"
+  ]
+}

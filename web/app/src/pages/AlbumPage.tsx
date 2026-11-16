@@ -1,6 +1,7 @@
 import { useParams } from 'react-router';
 import { DetailHeader } from '@/components/music/DetailHeader';
-import { playList, shuffleList } from '@/components/music/play';
+import { playList, shuffleList, toTrack } from '@/components/music/play';
+import { usePlayer } from '@/state/player';
 import { Shelves } from '@/components/music/ShelfView';
 import { LoadError, NeedsExtension } from '@/components/music/States';
 import { TrackList } from '@/components/music/TrackList';
@@ -11,7 +12,7 @@ import { usePageTint } from '@/lib/usePageTint';
 import { AlbumSkeleton } from '@/skeletons/PageSkeletons';
 import { detailFooter } from './pageStyles';
 
-/** An album (report §3): header, numbered tracks, footer, "more" shelves. */
+/** An album: Light Ceramic edition */
 export default function AlbumPage() {
   const id = decodeURIComponent(useParams().id ?? '');
   const { missing } = useYouTubeReady();
@@ -26,12 +27,13 @@ export default function AlbumPage() {
   const data = album.data;
   const artists = data.artists.map((a) => a.name).join(', ');
   const tracks = data.tracks;
-  // Album tracks carry no artist or artwork of their own; the queue credits the album's.
+
   const context = {
     source: { title: data.title, type: 'album' as const, id: data.id },
     fallbackArtwork: data.thumbnail,
     fallbackArtists: data.artists,
   };
+
   return (
     <>
       <DetailHeader
@@ -40,21 +42,28 @@ export default function AlbumPage() {
         motion={motion}
         onPlay={() => playList(tracks, 0, context)}
         onShuffle={() => shuffleList(tracks, context)}
+        onRadio={() => {
+          const first = tracks[0];
+          if (first) {
+            void usePlayer.getState().startRadio(toTrack(first, data.thumbnail));
+          }
+        }}
       />
-      <TrackList
-        tracks={tracks}
-        variant="album"
-        fallbackArtwork={data.thumbnail}
-        fallbackArtists={data.artists}
-        source={context.source}
-      />
+      <div className="mx-(--body-gutter) rounded-2xl border border-border-subtle bg-porcelain p-2 shadow-2xs overflow-hidden">
+        <TrackList
+          tracks={tracks}
+          variant="album"
+          fallbackArtwork={data.thumbnail}
+          fallbackArtists={data.artists}
+          source={context.source}
+        />
+      </div>
       <footer className={detailFooter}>
         <p>{data.subtitle}</p>
         <p>{data.meta}</p>
         {artists && <p>{artists}</p>}
       </footer>
       {data.more.length > 0 && (
-        // "More By" and friends sit on the alternate shelf background (report §3, section--alternate).
         <div className="bg-shelf pb-5">
           <Shelves shelves={data.more} />
         </div>
