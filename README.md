@@ -6,17 +6,29 @@
 
 ### Native Tauri v2 Music Client — YouTube Music Lossless/Hi-Res, Spotify Importer & Cross-Device Listen Together
 
+[![Latest Release](https://img.shields.io/github/v/release/Gimm17/Pinn-Bitchord?style=for-the-badge&labelColor=0d1117)](https://github.com/Gimm17/Pinn-Bitchord/releases/latest)
 [![License](https://img.shields.io/github/license/Gimm17/Pinn-Bitchord?style=for-the-badge&labelColor=0d1117)](LICENSE)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB?style=for-the-badge&logo=tauri&logoColor=white&labelColor=0d1117)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-2024-DEA584?style=for-the-badge&logo=rust&logoColor=white&labelColor=0d1117)](https://www.rust-lang.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white&labelColor=0d1117)](https://react.dev/)
 
-[**Perubahan dari Upstream**](#-perubahan-utama-dari-upstream) · [**Fitur Baru**](#-penambahan-fitur) · [**Screenshots**](#-screenshots-aplikasi) · [**Tech Stack**](#-tech-stack) · [**Struktur Repo**](#-struktur-direktori) · [**Build Lokal**](#-cara-menjalankan--build-lokal)
+[**Download**](#-download-windows-x64) · [**Perubahan dari Upstream**](#-perubahan-utama-dari-upstream) · [**Fitur Baru**](#-penambahan-fitur) · [**Screenshots**](#-screenshots-aplikasi) · [**Tech Stack**](#-tech-stack) · [**Struktur Repo**](#-struktur-direktori) · [**Build Lokal**](#-cara-menjalankan--build-lokal)
 
 </div>
 
 > [!IMPORTANT]
 > **BitChord Desktop** (`Pinn-Bitchord`) adalah pengembangan dan evolusi desktop dari repositori upstream [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord). Aplikasi ini tidak berafiliasi dengan Google LLC, YouTube Music, maupun Spotify AB.
+
+---
+
+## 📥 Download (Windows x64)
+
+Unduh versi terbaru dari halaman [**GitHub Releases**](https://github.com/Gimm17/Pinn-Bitchord/releases/latest):
+
+| Paket | File | Keterangan | Link |
+| :--- | :--- | :--- | :--- |
+| **Installer (NSIS)** | `BitChord_Setup.exe` | Instalasi standar Windows + shortcut Start Menu | [**Download Setup (.exe)**](https://github.com/Gimm17/Pinn-Bitchord/releases/latest/download/BitChord_Setup.exe) |
+| **Portable** | `BitChord_Portable.zip` | Ekstrak & langsung jalankan (`BitChord.exe` + `WebView2Loader.dll`) | [**Download Portable (.zip)**](https://github.com/Gimm17/Pinn-Bitchord/releases/latest/download/BitChord_Portable.zip) |
 
 ---
 
