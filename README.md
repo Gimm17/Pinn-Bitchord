@@ -6,7 +6,7 @@
 
 ### Native Tauri v2 Music Client — YouTube Music Lossless/Hi-Res, Spotify Importer & Cross-Device Listen Together
 
-[![License](https://img.shields.io/github/license/Gimm17/Pinn-Bithcord?style=for-the-badge&labelColor=0d1117)](LICENSE)
+[![License](https://img.shields.io/github/license/Gimm17/Pinn-Bitchord?style=for-the-badge&labelColor=0d1117)](LICENSE)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB?style=for-the-badge&logo=tauri&logoColor=white&labelColor=0d1117)](https://v2.tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-2024-DEA584?style=for-the-badge&logo=rust&logoColor=white&labelColor=0d1117)](https://www.rust-lang.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white&labelColor=0d1117)](https://react.dev/)
@@ -16,7 +16,7 @@
 </div>
 
 > [!IMPORTANT]
-> **BitChord Desktop** (`Pinn-Bithcord`) adalah pengembangan dan evolusi desktop dari repositori upstream [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord). Aplikasi ini tidak berafiliasi dengan Google LLC, YouTube Music, maupun Spotify AB.
+> **BitChord Desktop** (`Pinn-Bitchord`) adalah pengembangan dan evolusi desktop dari repositori upstream [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord). Aplikasi ini tidak berafiliasi dengan Google LLC, YouTube Music, maupun Spotify AB.
 
 ---
 
