@@ -51,10 +51,12 @@ AGENTS.md
 # Claude Code session files (launch configs, worktrees)
 .claude/
 
-# Local Windows desktop builds, logs & scratch files
+# Local Windows desktop builds, installers, logs & scratch files
 *.exe
 *.dll
 *.zip
+*.msi
+*.pdb
 .audit/
 .tmp_audit/
 AI_AGENT_CONTEXT/
@@ -63,3 +65,7 @@ node_modules/
 web/src-tauri/target/
 web/app/dist/
 web/app/.env.local
+/scripts/
+/Design_UI_UX/
+/Banner.png
+/upi_support.jpg

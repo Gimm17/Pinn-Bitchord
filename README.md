@@ -1,156 +1,154 @@
 <div align="center">
 
-<br/>
-<br/>
+<img src="web/src-tauri/icons/128x128.png" alt="BitChord Desktop Icon" width="110" />
 
-<img src="Logo.png" alt="BitChord app icon" width="200" />
+# BitChord Desktop
 
-# BitChord
+### Native Tauri v2 Music Client — YouTube Music Lossless/Hi-Res, Spotify Importer & Cross-Device Listen Together
 
-### Aesthetic YouTube Music Client
+[![License](https://img.shields.io/github/license/Gimm17/Pinn-Bithcord?style=for-the-badge&labelColor=0d1117)](LICENSE)
+[![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB?style=for-the-badge&logo=tauri&logoColor=white&labelColor=0d1117)](https://v2.tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-2024-DEA584?style=for-the-badge&logo=rust&logoColor=white&labelColor=0d1117)](https://www.rust-lang.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white&labelColor=0d1117)](https://react.dev/)
 
-<br/>
-
-[![Latest release](https://img.shields.io/github/v/release/kushagrasinghx/BitChord?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/releases)
-[![License](https://img.shields.io/github/license/kushagrasinghx/BitChord?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/kushagrasinghx/BitChord/total?style=for-the-badge&labelColor=0d1117)](https://github.com/kushagrasinghx/BitChord/releases)
-[![Listening now](https://api.bitchord.kushagrasingh.in/api/stats/live/badge.svg)](https://api.bitchord.kushagrasingh.in/api/stats/live)
-
-<br/>
-
-[**Download**](#download) · [**Features**](#features) · [**Contributing**](#contributing) · [**Support**](#support) · [**Disclaimer**](#disclaimer)
-
-<br/>
-
-<a href="https://fmhy.net/mobile#youtube-music" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/fmhy/cozy.svg" alt="Featured on FMHY" height="55"/></a>
-<a href="https://trendshift.io/repositories/177639?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-177639" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/177639" alt="kushagrasinghx%2FBitChord | Trendshift" width="250" height="55"/></a>
+[**Perubahan dari Upstream**](#-perubahan-utama-dari-upstream) · [**Fitur Baru**](#-penambahan-fitur) · [**Screenshots**](#-screenshots-aplikasi) · [**Tech Stack**](#-tech-stack) · [**Struktur Repo**](#-struktur-direktori) · [**Build Lokal**](#-cara-menjalankan--build-lokal)
 
 </div>
 
 > [!IMPORTANT]
-> BitChord is not affiliated with, endorsed by, or connected to YouTube or Google in any way. Use it at your own discretion.
+> **BitChord Desktop** (`Pinn-Bithcord`) adalah pengembangan dan evolusi desktop dari repositori upstream [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord). Aplikasi ini tidak berafiliasi dengan Google LLC, YouTube Music, maupun Spotify AB.
 
 ---
 
-<div align="center">
+## 📸 Screenshots Aplikasi
 
-<img src="Banner.png" alt="BitChord banner" width="100%" />
+| **Home Dashboard — Light Ceramic & Frosted Sage** | **Home Dashboard — Dark Ceramic** |
+| :---: | :---: |
+| <img src="docs/screenshots/home-light.png" alt="Home Light Ceramic" width="100%" /> | <img src="docs/screenshots/home-dark.png" alt="Home Dark Ceramic" width="100%" /> |
 
-<h1><a id="features"></a>Features</h1>
+| **Search & Instant Discovery** | **Moods & Moments Hub** |
+| :---: | :---: |
+| <img src="docs/screenshots/search-discovery.png" alt="Search & Discovery" width="100%" /> | <img src="docs/screenshots/moods-moments.png" alt="Moods & Moments" width="100%" /> |
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-
-#### Playback
-- **Search, browse and play** anything available on YouTube Music.
-- **Hi-Res lossless audio** — FLAC/ALAC from a configured module source, with YouTube Music as fallback.
-- **Gapless playback with true crossfade**, adjustable 0–12s.
-- **Automix [Beta]** — DJ-style transitions with beat-matching and tempo-stretching.
-- **Offline downloads** — save tracks with embedded metadata.
-- **Local music library** integration.
-- **Background playback** via a proper foreground media session.
-- **Apple-like lyrics animation** — credit to [binimum](https://github.com/binimum/am-lyrics).
-
-#### Connectivity & Accounts
-- **Sign in with your Google account** for personalized content.
-- **Spotify integration** — connect your account to play your playlists and Liked Songs.
-- **Discord Rich Presence** — in-app login, live track/artist/album and progress.
-- **Scrobbling** to Last.fm and ListenBrainz.
-- **Pluggable sources** — add, edit, test and health-check module sources.
-
-    </td>
-    <td width="50%" valign="top">
-
-#### Experience
-- **Animated album canvas** — motion artwork on the now-playing screen.
-- **Word-synced lyrics** — word/syllable-level highlighting from multiple sources.
-- **Lyrics providers** — credit to [lrc.red](https://lrc.red), [BiniLyrics](https://github.com/binimum), [BetterLyrics](https://github.com/better-lyrics/better-lyrics), [PaxSenix](https://lyrics.paxsenix.org), [LyricsPlus](https://github.com/ibratabian17/YouLyPlus), [SimpMusic](https://github.com/maxrave-dev/SimpMusic), [Unison](https://unison.boidu.dev), [Megalobiz](https://www.megalobiz.com), [KuGou](https://www.kugou.com), [LRCLIB](https://lrclib.net), [Musixmatch](https://www.musixmatch.com) and [Genius](https://genius.com).
-- **Dynamic, artwork-driven theming** — Material palette extracted from album art.
-- **Frosted-glass UI** — Telegram-style translucent bars via Haze, Material 3 theming.
-
-#### Controls & Tweaks
-- **Per-network audio quality** — separate quality ceilings for Wi-Fi and mobile data.
-- **Playback speed control** (0.5×–2.0×) and **skip silence**.
-- **Sleep timer** — fixed presets or "stop after this track".
-- **System equalizer** integration.
-- **Bit-perfect USB exclusive output** — sends lossless tracks to a USB DAC unchanged, at each track's own rate and bit depth. Thanks to [Mornye](https://github.com/mornyeapp/Mornye) for the reference.
-- **Stats for nerds** — codec, bit depth, sample rate, and more on the now-playing screen.
-
-    </td>
-  </tr>
-</table>
-
-</div>
+| **Spotify Playlist Importer (No API Key)** | **Settings & Native Integrations** |
+| :---: | :---: |
+| <img src="docs/screenshots/spotify-importer.png" alt="Spotify Importer" width="100%" /> | <img src="docs/screenshots/settings-integrations.png" alt="Settings & Integrations" width="100%" /> |
 
 ---
 
-<div align="center">
+## 🔄 Perubahan Utama dari Upstream
 
-<h1><a id="download"></a>Download</h1>
+Dibandingkan repositori asli [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord) (yang berfokus pada Android/KMP + Web Player berbasis ekstensi browser), versi ini membawa perombakan arsitektur dan UI untuk pengalaman desktop Windows yang mandiri:
 
-<a href="https://github.com/kushagrasinghx/BitChord/releases" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/supported/android/cozy.svg" alt="Download for Android" height="55"/></a>
+1. **Desktop Native Shell Berbasis Tauri v2 (Rust)** — [`web/src-tauri/`](web/src-tauri/)
+   - Mengemas frontend web player menjadi aplikasi desktop Windows native (`BitChord.exe` / WebView2) yang berdiri sendiri tanpa perlu memasang ekstensi browser terpisah.
+   - Mendukung **System Tray** (minimize ke tray saat jendela ditutup) dan **Single-Instance Guard** (`tauri-plugin-single-instance`).
+   - **Optimasi Memori RAM (*Working Set Trimming*)**: Memanggil API Windows `SetProcessWorkingSetSize` secara periodik dan saat diminimalkan di [`lib.rs`](web/src-tauri/src/lib.rs) untuk menekan penggunaan RAM WebView2 secara signifikan.
 
-Grab the latest signed APK from the [Releases](https://github.com/kushagrasinghx/BitChord/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
+2. **Native Rust HTTP & Auth Bridge** — [`web/src-tauri/src/bridge.rs`](web/src-tauri/src/bridge.rs)
+   - Menyediakan command IPC (`bridge_http`, `bridge_ping`, `bridge_auth_state`) menggunakan `reqwest` + `rustls-tls` untuk menangani request YouTube Music InnerTube dan Google Video stream langsung dari Rust (bebas kendala CORS browser).
 
+3. **Redesign UI/UX "Light Ceramic & Frosted Sage" + Theme Switcher** — [`tokens.css`](web/app/src/styles/tokens.css)
+   - Mengubah antarmuka menjadi palet editorial yang bersih dan terkalibrasi kontrasnya:
+     - Kanvas **Alabaster Ceramic** (`#F2EFE7`), kartu **Porcelain** (`#FFFFFF`), sidebar **Chrome** (`#EAE6DD`), panel inspector **Frosted Sage** (`#E8EAE3`), aksen **Slate Blue** (`#3368A0`), dan teks utama **Deep Slate Navy** (`#132230`).
+   - **Theme Switcher (`Light` / `Dark` / `System`)** di [`theme.ts`](web/app/src/lib/theme.ts) dan Settings → Appearance (default **Light Ceramic**, bebas kedip sebelum render pertama di [`index.html`](web/app/index.html)).
+   - **Perbaikan Kontras Panel Lirik (`SidePanel` & `LyricsPanel`)**: Menyuntikkan stylesheet Shadow DOM ter-scope (`:host(:not([data-full]))`) pada komponen `<am-lyrics>` sehingga teks lirik aktif/non-aktif tampil tajam pada panel terang, sambil mempertahankan mode gelap pada fullscreen player.
+   - **Perbaikan Kontras Halaman Playlist & Album (`[data-tint]`)**: Mengunci token warna teks light mode pada `tokens.css`, `DetailHeader.tsx`, dan `TrackList.tsx` agar judul playlist/lagu tetap kontras di atas kartu porcelain meskipun cover artwork berwarna gelap.
+   - **Pembenahan Layout Shell (`AppShell.tsx`, `DesktopHeader.tsx`, `PlayerBar.tsx`)**: Memisahkan `PlayerBar` ke baris grid tersendiri agar tidak tertutup sidebar, serta menampilkan status codec/bitrate dan shortcut pencarian (`Ctrl+F` / `/`) sesuai fungsi aslinya.
 
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="contributing"></a>Contributing</h1>
-
-We welcome contributions to BitChord! Please review our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
-
-[**Contributing Guide**](CONTRIBUTING.md) · [**Code of Conduct**](CODE_OF_CONDUCT.md) · [**Maintainers**](MAINTAINERS.md) · [**Additional Docs**](ADDITIONAL.md)
-
-### Thanks to all contributors ❤
-
-<a href="https://github.com/kushagrasinghx/BitChord/graphs/contributors">
-  <img src="https://raw.githubusercontent.com/kushagrasinghx/BitChord/contributors/contributors.svg" />
-</a>
-
-</div>
+4. **Transport Native Rust untuk Listen Together** — [`web/src-tauri/src/party.rs`](web/src-tauri/src/party.rs) & [`nativeTransport.ts`](web/app/src/party/nativeTransport.ts)
+   - WebView2 selalu mengirim header `Origin: http://tauri.localhost` yang ditolak allowlist server party dengan `403`. Transport HTTP & WebSocket dipindahkan ke Rust (`reqwest` + `tokio-tungstenite` dengan header `Authorization: Bearer <token>`), sehingga desktop langsung terhubung ke server Listen Together bersama perangkat Android tanpa perlu deploy server khusus.
 
 ---
 
-<div align="center">
+## ✨ Penambahan Fitur
 
-<h1><a id="support"></a>Support</h1>
-
-BitChord is free and always will be — if it's earned a spot in your rotation, you can chip in here:
-
-<a href="https://ko-fi.com/kushagrasinghx" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/donate/kofi-singular-alt/cozy.svg" alt="Support me on Ko-fi" height="55"/></a>
-<a href="https://paypal.me/kuxhagrasingh" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/donate/paypal-plural/cozy.svg" alt="Support us on PayPal" height="55"/></a>
-
-<br/>
-<img src="upi_support.jpg" alt="UPI Support" width="250" />
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="disclaimer"></a>Disclaimer & Legal Notice</h1>
-
-BitChord is an independent, community-driven third-party audio player and client. It is **not** associated with Google LLC, YouTube Music, Deezer, Telegram, or any of their parent companies.
-
-* **No Media Hosting:** BitChord does not host, upload, or store copyrighted music files. It operates strictly as an interface to scan local device storage or stream media directly from public, public-facing, or user-authenticated APIs.
-* **Fair Use & API Usage:** This software is created solely for personal research, educational, and fair-use purposes. The user is entirely responsible for ensuring their usage aligns with their local copyright laws and YouTube Terms of Service.
-* **No Ad-Blocking Guarantee:** While BitChord focuses on providing a clean listening environment, it does not guarantee permanent bypasses or modifications to commercial third-party platform conditions.
-* **Copyleft:** BitChord is free software under the GPLv3. The license does not let anyone forbid others from selling or redistributing copies, but any distribution must come with the Corresponding Source under the same license.
-
-</div>
+- **🎧 Spotify Playlist & Album Importer Tanpa API Key** ([`importer.ts`](web/app/src/data/spotify/importer.ts), [`SpotifyImportModal.tsx`](web/app/src/components/music/SpotifyImportModal.tsx))
+  - Tempel URL publik Spotify untuk mengambil daftar lagu dari metadata embed (`__NEXT_DATA__`), lalu dicocokkan secara otomatis (*batch fuzzy matching* di [`trackMatcher.ts`](web/app/src/data/match/trackMatcher.ts)) ke stream audio YouTube Music — termasuk auto-matching di latar belakang pada [`PlaylistPage.tsx`](web/app/src/pages/PlaylistPage.tsx).
+- **💾 Local Library & Offline Persistence** ([`localPlaylists.ts`](web/app/src/data/music/localPlaylists.ts), [`localFavorites.ts`](web/app/src/data/music/localFavorites.ts))
+  - Buat playlist lokal, simpan hasil impor Spotify, dan kelola lagu favorit secara lokal (`localStorage`) tanpa wajib login akun Google/YouTube.
+- **🎮 Discord Rich Presence via Native IPC Pipe** ([`discord.rs`](web/src-tauri/src/discord.rs), [`DiscordSettingsPage.tsx`](web/app/src/pages/DiscordSettingsPage.tsx))
+  - Mendeteksi langsung named pipe aplikasi Discord desktop (`\\.\pipe\discord-ipc-*`), mengirim status lagu, artis, artwork, dan progress bar secara aman tanpa perlu menyalin token akun Discord.
+- **🔊 Listen Together Lintas Perangkat (Desktop ↔ Android)** ([`ListenTogetherPage.tsx`](web/app/src/pages/ListenTogetherPage.tsx), [`backend/`](backend/), [`app/`](app/))
+  - **Join/Start Party Tanpa Login YouTube**: Desktop tanpa akun YT Music tetap bisa membuat atau bergabung ke party menggunakan identitas device (`sha256(deviceId)`).
+  - **Toggle "Play on this device"**: Tersedia di Desktop (gain gate Web Audio) dan Android (`PartyMute` di ujung DSP/`BitPerfectAudioSink`) untuk membisukan suara di perangkat tertentu tanpa memutus sinkronisasi antrean maupun kontrol party.
+  - **Host Per-Member Volume Control**: Host party dapat mengatur slider volume masing-masing pendengar atau meresetnya kembali ke volume bawaan perangkat.
+- **⏱️ Sleep Timer, Stream Quality Selector & Stats for Nerds** ([`SleepTimerPicker.tsx`](web/app/src/playback/SleepTimerPicker.tsx), [`StreamQuality.tsx`](web/app/src/shell/StreamQuality.tsx), [`NerdStats.tsx`](web/app/src/shell/NerdStats.tsx))
+  - Memantau detail teknis real-time dari stream aktif (`codec`, `sampleRateHz`, `bitrateKbps`, `channels`, `itag`, `client`, `mode`).
 
 ---
 
-<div align="center">
+## 🛠️ Tech Stack
 
-<h1><a id="license"></a>License</h1>
+| Layer | Teknologi & Library |
+|---|---|
+| **Desktop Shell & Backend Native** | [Tauri v2](https://v2.tauri.app/) (`2.12.5`), Rust (`edition = "2024"`), Microsoft Edge WebView2, `reqwest` (`rustls-tls`), `tokio`, `tokio-tungstenite`, Windows API (`SetProcessWorkingSetSize`) |
+| **Frontend UI** | [React 19](https://react.dev/), TypeScript, [Vite 8](https://vite.dev/), [Tailwind CSS v4](https://tailwindcss.com/), React Router, [Lucide Icons](https://lucide.dev/), Plus Jakarta Sans |
+| **State & Data Fetching** | [Zustand v5](https://zustand-demo.pmnd.rs/), [TanStack React Query v5](https://tanstack.com/query), TanStack React Virtual, IndexedDB (`idb`) |
+| **Audio Engine, DSP & Lirik** | `youtubei.js` (InnerTube), `shaka-player` (SABR/ABR), `hls.js`, `essentia.js` + `onnxruntime-web` (automix beat/key analysis), `signalsmith-stretch`, `@uimaxbai/am-lyrics` |
+| **Companion Modules (Upstream Sync)** | **Android / TV / WearOS**: Kotlin, Jetpack Compose, ExoPlayer/Media3, Gradle (`app/`, `tv/`, `wearos/`, `shared/`, `sharedUi/`) · **Party Server**: Go (`backend/`) |
+| **Tooling & Testing** | `pnpm` Workspaces (`pnpm@12.15.0`), Node.js `>=22`, Vitest, Cargo |
 
-This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
+---
 
-</div>
+## 📂 Struktur Direktori
+
+```text
+BitChord_PC/
+├── web/
+│   ├── app/                  # Frontend React + Vite + Tailwind v4 (UI Light/Dark Ceramic, player, Spotify importer)
+│   ├── src-tauri/            # Backend native Rust & Tauri v2 (HTTP bridge, Discord IPC, Listen Together WS, tray, RAM trim)
+│   ├── shared/               # Protokol RPC TypeScript antara UI, Tauri IPC, dan Extension
+│   ├── extension/            # Browser companion extension (Chrome/Firefox via WXT)
+│   └── docs/                 # Catatan teknis internal (playback, automix, lyrics, dll.)
+├── app/                      # Aplikasi Android (Kotlin / Jetpack Compose + sinkronisasi fitur Listen Together)
+├── backend/                  # Server Listen Together berbahasa Go (WebSocket & REST)
+├── shared/ & sharedUi/       # Modul Kotlin Multiplatform (KMP) dari upstream
+├── tv/ & wearos/             # Target companion Android TV & Wear OS dari upstream
+└── docs/screenshots/         # Screenshot aplikasi desktop untuk dokumentasi
+```
+
+---
+
+## 🚀 Cara Menjalankan & Build Lokal
+
+### Prasyarat
+- **Node.js** `>= 22` & **pnpm** (`corepack enable`)
+- **Rust Toolchain** (MSVC x64 target di Windows) & **Microsoft Edge WebView2 Runtime**
+
+### 1. Install Dependensi
+```powershell
+cd web
+pnpm install
+```
+
+### 2. Menjalankan Mode Development
+```powershell
+# Menjalankan frontend Vite dev server
+pnpm --filter @bitchord/app dev
+
+# Atau menjalankan aplikasi desktop Tauri dalam mode dev
+pnpm exec tauri dev
+```
+
+### 3. Typecheck, Unit Test & Build Production Standalone
+```powershell
+# Cek TypeScript dan jalankan unit test frontend
+pnpm -r typecheck
+pnpm -r test
+
+# Build production frontend (@bitchord/app)
+pnpm --filter @bitchord/app build
+
+# Kompilasi executable standalone Windows (.exe tanpa installer)
+pnpm exec tauri build --no-bundle
+```
+Hasil executable release akan berada di `web/src-tauri/target/release/bitchord.exe` (beserta `WebView2Loader.dll` jika didistribusikan sebagai paket portabel).
+
+---
+
+## 🙏 Credits & Lisensi
+
+- **Upstream Project:** [kushagrasinghx/BitChord](https://github.com/kushagrasinghx/BitChord) — Arsitektur dasar player, Kotlin Multiplatform core, dan backend Listen Together.
+- **Lyrics Engine:** [binimum/am-lyrics](https://github.com/binimum/am-lyrics) / `@uimaxbai/am-lyrics`.
+- **Lisensi:** Proyek ini dirilis di bawah lisensi **GNU General Public License v3.0 (GPLv3)**. Lihat file [`LICENSE`](LICENSE) untuk detail lengkap.
